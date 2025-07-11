@@ -41,7 +41,7 @@ const logger = {
     },
 };
 
-// ABI Contracts (tetap sama)
+// ABI Contracts
 const zenABI = [
     'function approve(address spender, uint256 amount) public returns (bool)',
     'function balanceOf(address account) public view returns (uint256)',
@@ -106,7 +106,7 @@ function getAISelection() {
     return AI_OPTIONS[choice - 1];
 }
 
-// --- Fungsi Interaksi Blockchain (diperbarui untuk menerima wallet dan provider) ---
+// --- Fungsi Interaksi Blockchain (menerima wallet dan provider) ---
 async function checkZENBalance(wallet, zenContract) {
     logger.loading(`Checking ZEN balance for ${wallet.address}...`);
     try {
@@ -244,13 +244,10 @@ async function playBattleships(wallet, provider, x, y) {
 }
 
 // --- Fungsi Game (diperbarui untuk menerima wallet dan provider) ---
-async function houseOfTenGame(wallet, provider, zenContract, bettingContract) {
+// Fungsi ini kini hanya menerima parameter, tanpa interaksi prompt di dalamnya
+async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingContract, selectedAI, betAmountETH) {
     try {
-        logger.step('Starting HouseOfTen Game...');
-        const selectedAI = getAISelection();
-        logger.info(`Selected AI: ${selectedAI.name} (${selectedAI.address})`);
-
-        const betAmountETH = prompt('Enter bet amount in ETH (e.g., 0.01): ');
+        logger.step(`Starting HouseOfTen Game for ${wallet.address} (AI: ${selectedAI.name}, Bet: ${betAmountETH} ETH)...`);
         const betAmountWei = ethers.parseEther(betAmountETH);
         const betType = 1;
 
@@ -260,7 +257,7 @@ async function houseOfTenGame(wallet, provider, zenContract, bettingContract) {
             return;
         }
         const ethBalance = await checkETHBalance(wallet, provider);
-        if (ethBalance < ethers.parseEther('0.01')) { // Perkiraan gas ETH
+        if (ethBalance < ethers.parseEther('0.01')) {
             logger.error('Insufficient ETH balance for gas fees. Required: 0.01 ETH');
             return;
         }
@@ -290,7 +287,7 @@ async function battleshipsGame(wallet, provider) {
             return;
         }
         const ethBalance = await checkETHBalance(wallet, provider);
-        if (ethBalance < ethers.parseEther('0.01')) { // Perkiraan gas ETH
+        if (ethBalance < ethers.parseEther('0.01')) {
             logger.error('Insufficient ETH balance for gas fees. Required: 0.01 ETH');
             return;
         }
@@ -314,7 +311,7 @@ async function battleshipsGame(wallet, provider) {
     }
 }
 
-// --- Fungsi Utama (main) untuk Multiple Akun ---
+// --- Fungsi Utama (main) untuk Multiple Akun dengan Otomatisasi ---
 async function main() {
     logger.banner();
 
@@ -324,8 +321,7 @@ async function main() {
         const rpcUrl = process.env[`RPC_URL_${i}`];
 
         if (!privateKey && !rpcUrl) {
-            // Berhenti jika tidak ada lagi pasangan KEY dan URL yang ditemukan
-            break;
+            break; // Berhenti jika tidak ada lagi pasangan KEY dan URL yang ditemukan
         }
         if (!privateKey || !rpcUrl) {
             // Error jika ada salah satu yang hilang (misal KEY_1 ada tapi URL_1 tidak)
@@ -338,6 +334,27 @@ async function main() {
     if (accounts.length === 0) {
         logger.error('No private key and RPC URL pairs found in .env (e.g., PRIVATE_KEY_1, RPC_URL_1).');
         process.exit(1);
+    }
+
+    // Tanya pilihan game HANYA SEKALI di awal
+    const globalChoice = getMenuSelection();
+
+    if (globalChoice === 6) {
+        logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
+        process.exit(0); // Keluar jika pengguna memilih exit di awal
+    }
+
+    let betAmountETH = null;
+    let selectedAI = null;
+
+    if (globalChoice === 1) { // Jika memilih HouseOfTen
+        selectedAI = getAISelection();
+        logger.info(`Selected AI for all accounts: ${selectedAI.name} (${selectedAI.address})`);
+        betAmountETH = prompt('Enter bet amount in ETH (e.g., 0.01) for all accounts: ');
+        if (isNaN(parseFloat(betAmountETH)) || parseFloat(betAmountETH) <= 0) {
+            logger.error('Invalid bet amount. Exiting.');
+            process.exit(1);
+        }
     }
 
     // Loop setiap akun
@@ -354,19 +371,15 @@ async function main() {
             logger.wallet(`Wallet Address: ${currentWallet.address}`);
             logger.info(`Using RPC: ${account.rpcUrl}`);
 
-            // Beri pilihan game untuk akun ini
-            while (true) {
-                const choice = getMenuSelection(); // Biarkan pengguna memilih game untuk akun ini
-                if (choice === 1) {
-                    await houseOfTenGame(currentWallet, currentProvider, currentZenContract, currentBettingContract);
-                } else if (choice === 3) {
-                    await battleshipsGame(currentWallet, currentProvider);
-                } else if (choice === 6) {
-                    logger.success('Moving to next account (if any), or exiting.');
-                    break; // Keluar dari loop game untuk akun ini
-                }
-                console.log('\n'); // Spasi antar aksi
+            // Jalankan game berdasarkan pilihan global
+            if (globalChoice === 1) { // HouseOfTen Game
+                // Parameter betAmountETH dan selectedAI diambil dari input awal
+                await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
+            } else if (globalChoice === 3) { // Battleships Game
+                await battleshipsGame(currentWallet, currentProvider); // Battleships tidak butuh parameter tambahan
             }
+            // Opsi 2, 4, 5 sudah ditangani di getMenuSelection()
+
         } catch (error) {
             logger.error(`Error processing account ${index + 1} (${account.rpcUrl}): ${error.message}`);
         }
