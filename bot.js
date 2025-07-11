@@ -215,7 +215,8 @@ async function playBattleships(wallet, provider, x, y) {
             gasLimit: 210000,
             gasPrice: ethers.parseUnits('130', 'gwei'),
             chainId: CHAIN_ID,
-            nonce: nonce
+            nonce: nonce,
+            value: ethers.parseEther('0.0028')
         };
 
         logger.info('Sending transaction with data:', {
