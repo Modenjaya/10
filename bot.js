@@ -36,7 +36,7 @@ const logger = {
     banner: () => {
         console.log(`${colors.cyan}${colors.bold}`);
         console.log(`---------------------------------------------`);
-        console.log(`  Ten Testnet Auto Bot  `);
+        console.log(`  Ten PEPEK `);
         console.log(`---------------------------------------------${colors.reset}\n`);
     },
 };
@@ -49,7 +49,11 @@ const zenABI = [
 
 const bettingABI = ['function placeBet(uint256 betType, address aiAddress, uint256 amount) public'];
 
-// --- Fungsi Helper Umum ---
+---
+
+## Fungsi Helper Umum
+
+```javascript
 function generateRandomCoordinates() {
     return {
         x: Math.floor(Math.random() * 100),
@@ -106,7 +110,11 @@ function getAISelection() {
     return AI_OPTIONS[choice - 1];
 }
 
-// --- Fungsi Interaksi Blockchain (menerima wallet dan provider) ---
+---
+
+## Fungsi Interaksi Blockchain (Menerima Wallet dan Provider)
+
+```javascript
 async function checkZENBalance(wallet, zenContract) {
     logger.loading(`Checking ZEN balance for ${wallet.address}...`);
     try {
@@ -243,7 +251,11 @@ async function playBattleships(wallet, provider, x, y) {
     }
 }
 
-// --- Fungsi Game (diperbarui untuk menerima wallet dan provider) ---
+---
+
+## Fungsi Game (Otomatis)
+
+```javascript
 // Fungsi ini kini hanya menerima parameter, tanpa interaksi prompt di dalamnya
 async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingContract, selectedAI, betAmountETH) {
     try {
@@ -311,7 +323,11 @@ async function battleshipsGame(wallet, provider) {
     }
 }
 
-// --- Fungsi Utama (main) untuk Multiple Akun dengan Otomatisasi ---
+---
+
+## Fungsi Utama (main) untuk Multiple Akun
+
+```javascript
 async function main() {
     logger.banner();
 
@@ -336,61 +352,63 @@ async function main() {
         process.exit(1);
     }
 
-    // Tanya pilihan game HANYA SEKALI di awal
-    const globalChoice = getMenuSelection();
+    // Loop utama untuk memilih game berulang kali
+    while (true) {
+        // Tanya pilihan game HANYA SEKALI di awal untuk siklus ini
+        const globalChoice = getMenuSelection();
 
-    if (globalChoice === 6) {
-        logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
-        process.exit(0); // Keluar jika pengguna memilih exit di awal
-    }
-
-    let betAmountETH = null;
-    let selectedAI = null;
-
-    if (globalChoice === 1) { // Jika memilih HouseOfTen
-        selectedAI = getAISelection();
-        logger.info(`Selected AI for all accounts: ${selectedAI.name} (${selectedAI.address})`);
-        betAmountETH = prompt('Enter bet amount in ETH (e.g., 0.01) for all accounts: ');
-        if (isNaN(parseFloat(betAmountETH)) || parseFloat(betAmountETH) <= 0) {
-            logger.error('Invalid bet amount. Exiting.');
-            process.exit(1);
+        if (globalChoice === 6) {
+            logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
+            break; // Keluar dari loop utama dan mengakhiri skrip
         }
-    }
 
-    // Loop setiap akun
-    for (const [index, account] of accounts.entries()) {
-        console.log(`\n${colors.bold}--- Processing Account ${index + 1}/${accounts.length} ---${colors.reset}`);
-        try {
-            const currentProvider = new ethers.JsonRpcProvider(account.rpcUrl);
-            const currentWallet = new ethers.Wallet(account.privateKey, currentProvider);
+        let betAmountETH = null;
+        let selectedAI = null;
 
-            // Inisialisasi ulang kontrak untuk setiap wallet
-            const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWallet);
-            const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWallet);
-
-            logger.wallet(`Wallet Address: ${currentWallet.address}`);
-            logger.info(`Using RPC: ${account.rpcUrl}`);
-
-            // Jalankan game berdasarkan pilihan global
-            if (globalChoice === 1) { // HouseOfTen Game
-                // Parameter betAmountETH dan selectedAI diambil dari input awal
-                await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
-            } else if (globalChoice === 3) { // Battleships Game
-                await battleshipsGame(currentWallet, currentProvider); // Battleships tidak butuh parameter tambahan
+        if (globalChoice === 1) { // Jika memilih HouseOfTen
+            selectedAI = getAISelection();
+            logger.info(`Selected AI for all accounts: ${selectedAI.name} (${selectedAI.address})`);
+            betAmountETH = prompt('Enter bet amount in ETH (e.g., 0.01) for all accounts: ');
+            if (isNaN(parseFloat(betAmountETH)) || parseFloat(betAmountETH) <= 0) {
+                logger.error('Invalid bet amount. Returning to main menu.');
+                console.log('\n'); // Spasi untuk keterbacaan
+                continue; // Kembali ke awal loop utama (tampilkan menu lagi)
             }
-            // Opsi 2, 4, 5 sudah ditangani di getMenuSelection()
+        }
 
-        } catch (error) {
-            logger.error(`Error processing account ${index + 1} (${account.rpcUrl}): ${error.message}`);
+        // Loop setiap akun untuk menjalankan aksi yang dipilih
+        for (const [index, account] of accounts.entries()) {
+            console.log(`\n${colors.bold}--- Processing Account ${index + 1}/${accounts.length} ---${colors.reset}`);
+            try {
+                const currentProvider = new ethers.JsonRpcProvider(account.rpcUrl);
+                const currentWallet = new ethers.Wallet(account.privateKey, currentProvider);
+
+                const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWallet);
+                const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWallet);
+
+                logger.wallet(`Wallet Address: ${currentWallet.address}`);
+                logger.info(`Using RPC: ${account.rpcUrl}`);
+
+                if (globalChoice === 1) { // HouseOfTen Game
+                    await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
+                } else if (globalChoice === 3) { // Battleships Game
+                    await battleshipsGame(currentWallet, currentProvider);
+                }
+
+            } catch (error) {
+                logger.error(`Error processing account ${index + 1} (${account.rpcUrl}): ${error.message}`);
+            }
+            // Opsional: Tambahkan delay antar akun untuk menghindari rate limiting
+            if (index < accounts.length - 1) {
+                logger.info('Waiting 10 seconds before processing next account...');
+                await new Promise(resolve => setTimeout(resolve, 10000)); // Delay 10 detik
+            }
         }
-        // Opsional: Tambahkan delay antar akun untuk menghindari rate limiting
-        if (index < accounts.length - 1) {
-            logger.info('Waiting 10 seconds before processing next account...');
-            await new Promise(resolve => setTimeout(resolve, 10000)); // Delay 10 detik
-        }
+        logger.success('All accounts processed for the selected action.');
+        console.log('\n'); // Spasi untuk keterbacaan sebelum kembali ke menu
     }
 
-    logger.success('All accounts processed. Exiting Ten Testnet Auto Bot. Goodbye!');
+    logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
 }
 
 main().catch((error) => {
