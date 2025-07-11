@@ -6,7 +6,7 @@ const prompt = require('prompt-sync')({ sigint: true });
 const CHAIN_ID = 443;
 const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae';
 const BETTING_CONTRACT = '0xe9211849e5557049e9a4c1fca4d170d3944a1510';
-const BATTLESHIPS_CONTRACT = '0x6f974aa7cb77f0daa55fdd28f19dd96c0110f0f9';
+const BATTLESHIPS_CONTRACT = '0x88fa5aA29BFd406Cd052595cCD8B1347913Aa1E7';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
 
 const AI_OPTIONS = [
