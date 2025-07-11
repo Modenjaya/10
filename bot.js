@@ -4,24 +4,21 @@ const axios = require('axios');
 const prompt = require('prompt-sync')({ sigint: true });
 
 const CHAIN_ID = 443;
-const ZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
+const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae';
 const BETTING_CONTRACT = '0x88fa5aA29BFd406Cd052595cCD8B1347913Aa1E7';
 const BATTLESHIPS_CONTRACT = '0xD64206151CEAE054962E2eD7aC16aad5e39c3Ef3';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
 
-// --- Konstanta TENZEN yang DIMODIFIKASI ---
+// --- Konstanta Battleships baru untuk value heksadesimal ---
+const BATTLESHIPS_VALUE_AMOUNT = '0xfbd0fc05ae000'; // Value Battleships dalam heksadesimal
+// -------------------------------------------------------------
+
+// Konstanta TENZEN
 const TENZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
-const TENZEN_FUNCTION_SELECTOR = '0x93e84cd9'; // Data untuk memulai Tenzen
-
-// Menggunakan string heksadesimal langsung untuk value
-const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000'; // Tetap dalam format heksadesimal
-
-// Menggunakan parseUnits untuk gasPrice (sesuai data manual Anda: 0x7270e00 = 120 Gwei)
+const TENZEN_FUNCTION_SELECTOR = '0x93e84cd9';
+const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000';
 const TENZEN_GAS_PRICE = ethers.parseUnits('120', 'gwei');
-
-// Gas Limit sebagai nilai desimal (sesuai data manual Anda: 0x1f5c5 = 128453)
 const TENZEN_GAS_LIMIT = 128453;
-// ----------------------------------------
 
 const AI_OPTIONS = [
     { name: 'CZHuffle', address: '0x9fde625ed8a6ec0f3ca393a62be34231a5c167f4' },
@@ -226,7 +223,9 @@ async function playBattleships(wallet, provider, x, y) {
             gasPrice: ethers.parseUnits('130', 'gwei'),
             chainId: CHAIN_ID,
             nonce: nonce,
-            value: ethers.parseEther('0.0028') // Menambahkan value untuk Battleships
+            // --- Menggunakan nilai heksadesimal langsung untuk Battleships ---
+            value: BATTLESHIPS_VALUE_AMOUNT 
+            // -----------------------------------------------------------------
         };
 
         logger.info('Sending transaction with data:', {
@@ -259,11 +258,8 @@ async function playTenzenGame(wallet, provider) {
     logger.loading(`Starting Tenzen Game for ${wallet.address}...`);
     try {
         const ethBalance = await checkETHBalance(wallet, provider);
-        // Penting: Mengonversi TENZEN_VALUE_AMOUNT ke BigInt untuk perbandingan yang tepat
         const requiredValueBigInt = ethers.toBigInt(TENZEN_VALUE_AMOUNT); 
         
-        // Periksa apakah saldo ETH mencukupi untuk value + perkiraan gas fee
-        // Kita menggunakan margin 0.005 ETH untuk gas fee di atas value
         if (ethBalance < requiredValueBigInt + ethers.parseEther('0.005')) {
             logger.error(`Insufficient ETH balance for Tenzen. Required: at least ${ethers.formatEther(requiredValueBigInt + ethers.parseEther('0.005'))} ETH`);
             return;
@@ -278,7 +274,7 @@ async function playTenzenGame(wallet, provider) {
             gasPrice: TENZEN_GAS_PRICE,
             chainId: CHAIN_ID,
             nonce: nonce,
-            value: TENZEN_VALUE_AMOUNT // Menggunakan string heksadesimal langsung
+            value: TENZEN_VALUE_AMOUNT
         };
 
         logger.info('Sending Tenzen transaction with data:', {
@@ -349,8 +345,12 @@ async function battleshipsGame(wallet, provider) {
         }
 
         const ethBalance = await checkETHBalance(wallet, provider);
-        if (ethBalance < ethers.parseEther('0.01')) {
-            logger.error('Insufficient ETH balance for gas fees. Required: 0.01 ETH');
+        // Penting: Mengonversi BATTLESHIPS_VALUE_AMOUNT ke BigInt untuk perbandingan
+        const requiredBattleshipsValueBigInt = ethers.toBigInt(BATTLESHIPS_VALUE_AMOUNT);
+
+        // Memastikan saldo ETH mencukupi untuk value + perkiraan gas fee
+        if (ethBalance < requiredBattleshipsValueBigInt + ethers.parseEther('0.01')) { // 0.01 ETH sebagai margin gas
+            logger.error(`Insufficient ETH balance for Battleships. Required: at least ${ethers.formatEther(requiredBattleshipsValueBigInt + ethers.parseEther('0.01'))} ETH`);
             return;
         }
 
