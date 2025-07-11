@@ -212,11 +212,13 @@ async function playBattleships(wallet, provider, x, y) {
         const txData = {
             to: BATTLESHIPS_CONTRACT,
             data: data,
-            gasLimit: 210000,
-            gasPrice: ethers.parseUnits('130', 'gwei'),
+            gasLimit: 210000, // Pertimbangkan untuk menaikkan ini jika masih revert
+            gasPrice: ethers.parseUnits('130', 'gwei'), // Sesuaikan jika ingin mengikuti gasPrice manual
             chainId: CHAIN_ID,
             nonce: nonce,
-            value: ethers.parseEther('0.0028')
+            // --- TAMBAHKAN ATAU UBAH BARIS INI ---
+            value: ethers.parseEther('0.0028') // Nilai 0xfbd0fc05ae000 dalam ETH
+            // ------------------------------------
         };
 
         logger.info('Sending transaction with data:', {
@@ -225,7 +227,8 @@ async function playBattleships(wallet, provider, x, y) {
             gasLimit: txData.gasLimit.toString(),
             gasPrice: txData.gasPrice.toString(),
             chainId: txData.chainId,
-            nonce: txData.nonce
+            nonce: txData.nonce,
+            value: txData.value ? txData.value.toString() : '0' // Menampilkan value di log
         });
 
         const tx = await wallet.sendTransaction(txData);
