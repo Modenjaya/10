@@ -51,8 +51,6 @@ const bettingABI = ['function placeBet(uint256 betType, address aiAddress, uint2
 
 ---
 
-## Fungsi Helper Umum
-
 ```javascript
 function generateRandomCoordinates() {
     return {
