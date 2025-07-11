@@ -36,7 +36,7 @@ const logger = {
     banner: () => {
         console.log(`${colors.cyan}${colors.bold}`);
         console.log(`---------------------------------------------`);
-        console.log(`  Ten Testnet Auto Bot - Airdrop Insiders `);
+        console.log(`  Ten Testnet Auto Bot  `);
         console.log(`---------------------------------------------${colors.reset}\n`);
     },
 };
