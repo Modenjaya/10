@@ -298,7 +298,7 @@ async function battleshipsGame(wallet, provider) {
 
         // Pastikan ada cukup ETH untuk gas dan juga untuk 'value' yang akan dikirim
         const ethBalance = await checkETHBalance(wallet, provider);
-        const requiredEthForBattleships = ethers.parseEther('0.0007').add(ethers.parseEther('0.01')); // 0.0007 (value) + 0.01 (perkiraan gas)
+        const requiredEthForBattleships = ethers.parseEther('0.0007') + ethers.parseEther('0.01');
         if (ethBalance < requiredEthForBattleships) {
             logger.error(`Insufficient ETH balance for gas fees and game value. Required: ${ethers.formatEther(requiredEthForBattleships)} ETH`);
             return;
