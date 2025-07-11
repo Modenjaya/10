@@ -4,7 +4,9 @@ const axios = require('axios');
 const prompt = require('prompt-sync')({ sigint: true });
 
 const CHAIN_ID = 443;
-const ZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
+// Perhatian: ZEN_CONTRACT di sini adalah 0xDa701a7231096209C4F5AC83F44F22eFA75f4519, yang sama dengan TENZEN_CONTRACT.
+// Pastikan ini adalah alamat yang benar untuk ZEN token di jaringan Anda.
+const ZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519'; 
 const BETTING_CONTRACT = '0x88fa5aA29BFd406Cd052595cCD8B1347913Aa1E7';
 const BATTLESHIPS_CONTRACT = '0xD64206151CEAE054962E2eD7aC16aad5e39c3Ef3';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
@@ -223,9 +225,7 @@ async function playBattleships(wallet, provider, x, y) {
             gasPrice: ethers.parseUnits('130', 'gwei'),
             chainId: CHAIN_ID,
             nonce: nonce,
-            // --- Menggunakan nilai heksadesimal langsung untuk Battleships ---
-            value: BATTLESHIPS_VALUE_AMOUNT 
-            // -----------------------------------------------------------------
+            value: BATTLESHIPS_VALUE_AMOUNT // Menggunakan nilai heksadesimal langsung
         };
 
         logger.info('Sending transaction with data:', {
@@ -337,18 +337,20 @@ async function battleshipsGame(wallet, provider) {
         let { x, y } = generateRandomCoordinates();
         logger.info(`Selected coordinates: (${x}, ${y})`);
 
+        // Perhatian: ZEN_CONTRACT digunakan di sini. Pastikan ZEN_CONTRACT memang token ZEN.
+        // Saat ini, ZEN_CONTRACT sama dengan TENZEN_CONTRACT (0xDa701a7231096209C4F5AC83F44F22eFA75f4519).
+        // Jika 0xDa701a7231096209C4F5AC83F44F22eFA75f4519 adalah kontrak game Tenzen, maka ini bukan kontrak ZEN token.
+        // Jika Battleships memerlukan ZEN, pastikan ZEN_CONTRACT menunjuk ke alamat ZEN token yang benar.
         const requiredZEN = ethers.parseEther('0.001');
-        const zenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, wallet);
+        const zenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, wallet); // Gunakan ZEN_CONTRACT yang benar
         const zenBalance = await checkZENBalance(wallet, zenContract);
         if (zenBalance < requiredZEN) {
             logger.warn(`ZEN balance for Battleships is less than ${ethers.formatEther(requiredZEN)} ETH. This might not be an issue if ZEN isn't strictly required for Battleships.`);
         }
 
         const ethBalance = await checkETHBalance(wallet, provider);
-        // Penting: Mengonversi BATTLESHIPS_VALUE_AMOUNT ke BigInt untuk perbandingan
         const requiredBattleshipsValueBigInt = ethers.toBigInt(BATTLESHIPS_VALUE_AMOUNT);
 
-        // Memastikan saldo ETH mencukupi untuk value + perkiraan gas fee
         if (ethBalance < requiredBattleshipsValueBigInt + ethers.parseEther('0.01')) { // 0.01 ETH sebagai margin gas
             logger.error(`Insufficient ETH balance for Battleships. Required: at least ${ethers.formatEther(requiredBattleshipsValueBigInt + ethers.parseEther('0.01'))} ETH`);
             return;
@@ -407,6 +409,7 @@ async function main() {
 
         let betAmountETH = null;
         let selectedAI = null;
+        let rounds = 1; // Default to 1 round
 
         if (globalChoice === 1) {
             selectedAI = getAISelection();
@@ -417,37 +420,61 @@ async function main() {
                 console.log('\n');
                 continue;
             }
+            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
+            if (!isNaN(roundsInput) && roundsInput > 0) {
+                rounds = roundsInput;
+            } else {
+                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
+            }
+        } else if (globalChoice === 2 || globalChoice === 3) { // Untuk Tenzen atau Battleships
+            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
+            if (!isNaN(roundsInput) && roundsInput > 0) {
+                rounds = roundsInput;
+            } else {
+                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
+            }
         }
 
-        for (const [index, account] of accounts.entries()) {
-            console.log(`\n${colors.bold}--- Processing Account ${index + 1}/${accounts.length} ---${colors.reset}`);
-            try {
-                const currentProvider = new ethers.JsonRpcProvider(account.rpcUrl);
-                const currentWallet = new ethers.Wallet(account.privateKey, currentProvider);
 
-                const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWallet);
-                const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWallet);
+        for (let r = 0; r < rounds; r++) { // Loop untuk putaran
+            console.log(`\n${colors.bold}--- Starting Round ${r + 1}/${rounds} ---${colors.reset}`);
+            for (const [index, account] of accounts.entries()) {
+                console.log(`\n${colors.bold}--- Processing Account ${index + 1}/${accounts.length} (Round ${r + 1}) ---${colors.reset}`);
+                try {
+                    const currentProvider = new ethers.JsonRpcProvider(account.rpcUrl);
+                    const currentWallet = new ethers.Wallet(account.privateKey, currentProvider);
 
-                logger.wallet(`Wallet Address: ${currentWallet.address}`);
-                logger.info(`Using RPC: ${account.rpcUrl}`);
+                    // PENTING: Periksa kembali alamat ZEN_CONTRACT.
+                    // Saat ini disetel ke 0xDa701a7231096209C4F5AC83F44F22eFA75f4519 (alamat Tenzen_Contract).
+                    // Jika ini bukan token ZEN yang sebenarnya, interaksi ZEN (approve, balance) akan gagal.
+                    const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWallet);
+                    const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWallet);
 
-                if (globalChoice === 1) {
-                    await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
-                } else if (globalChoice === 2) {
-                    await playTenzenGame(currentWallet, currentProvider);
-                } else if (globalChoice === 3) {
-                    await battleshipsGame(currentWallet, currentProvider);
+                    logger.wallet(`Wallet Address: ${currentWallet.address}`);
+                    logger.info(`Using RPC: ${account.rpcUrl}`);
+
+                    if (globalChoice === 1) {
+                        await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
+                    } else if (globalChoice === 2) {
+                        await playTenzenGame(currentWallet, currentProvider);
+                    } else if (globalChoice === 3) {
+                        await battleshipsGame(currentWallet, currentProvider);
+                    }
+
+                } catch (error) {
+                    logger.error(`Error processing account ${index + 1} (${account.rpcUrl}) in Round ${r + 1}: ${error.message}`);
                 }
-
-            } catch (error) {
-                logger.error(`Error processing account ${index + 1} (${account.rpcUrl}): ${error.message}`);
+                if (index < accounts.length - 1) {
+                    logger.info('Waiting 10 seconds before processing next account...');
+                    await new Promise(resolve => setTimeout(resolve, 10000));
+                }
             }
-            if (index < accounts.length - 1) {
-                logger.info('Waiting 10 seconds before processing next account...');
-                await new Promise(resolve => setTimeout(resolve, 10000));
+            if (r < rounds - 1) { // Hanya jeda jika bukan putaran terakhir
+                logger.info(`Waiting 3 seconds before next round...`);
+                await new Promise(resolve => setTimeout(resolve, 3000)); // Jeda antar putaran
             }
         }
-        logger.success('All accounts processed for the selected action.');
+        logger.success('All rounds processed for the selected action.');
         console.log('\n');
     }
 
