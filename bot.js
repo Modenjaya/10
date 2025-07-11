@@ -209,13 +209,20 @@ async function playBattleships(wallet, provider, x, y) {
 
         const nonce = await provider.getTransactionCount(wallet.address, 'latest');
 
+        // --- BAGIAN MODIFIKASI DIMULAI ---
+        // Tentukan jumlah ETH yang ingin Anda kirimkan bersama transaksi Battleships.
+        // Berdasarkan data raw yang Anda berikan, value-nya adalah 0.0007 ETH.
+        const valueToSend = ethers.parseEther('0.0007'); 
+        // --- BAGIAN MODIFIKASI BERAKHIR ---
+
         const txData = {
-            to: BATTLESHIPS_CONTRACT,
+            to: BATTLESHIPS_CONTRACT, // PASTIKAN ALAMAT KONTRAK INI BENAR
             data: data,
             gasLimit: 210000,
             gasPrice: ethers.parseUnits('130', 'gwei'),
             chainId: CHAIN_ID,
-            nonce: nonce
+            nonce: nonce,
+            value: valueToSend // Menambahkan properti 'value' ke objek transaksi
         };
 
         logger.info('Sending transaction with data:', {
@@ -224,7 +231,8 @@ async function playBattleships(wallet, provider, x, y) {
             gasLimit: txData.gasLimit.toString(),
             gasPrice: txData.gasPrice.toString(),
             chainId: txData.chainId,
-            nonce: txData.nonce
+            nonce: txData.nonce,
+            value: ethers.formatEther(txData.value) + ' ETH' // Menampilkan value dalam ETH untuk log
         });
 
         const tx = await wallet.sendTransaction(txData);
@@ -277,16 +285,22 @@ async function battleshipsGame(wallet, provider) {
         let { x, y } = generateRandomCoordinates();
         logger.info(`Selected coordinates: (${x}, ${y})`);
 
-        const requiredZEN = ethers.parseEther('0.001');
+        // CATATAN: Transaksi Battleships yang Anda berikan sebelumnya juga memiliki 'value' sebesar 0.0007 ETH.
+        // Jika kontrak Battleships memerlukan ZEN, Anda perlu memastikan logika ini sesuai.
+        // Berdasarkan analisis sebelumnya, kontrak Battleships ini mungkin menerima ETH secara langsung.
+        const requiredZEN = ethers.parseEther('0.001'); // Ini untuk pengecekan ZEN, mungkin tidak relevan jika Battleships menggunakan ETH
         const zenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, wallet);
         const zenBalance = await checkZENBalance(wallet, zenContract);
+        // Jika Battleships hanya menggunakan ETH, baris di bawah ini bisa dipertimbangkan untuk diubah/dihapus
         if (zenBalance < requiredZEN) {
-            logger.error(`Insufficient ZEN balance. Required: ${ethers.formatEther(requiredZEN)} ETH`);
-            return;
+            logger.warn(`ZEN Balance rendah: ${ethers.formatEther(zenBalance)} ETH. Namun, Battleships mungkin menggunakan ETH langsung.`);
         }
+
+        // Pastikan ada cukup ETH untuk gas dan juga untuk 'value' yang akan dikirim
         const ethBalance = await checkETHBalance(wallet, provider);
-        if (ethBalance < ethers.parseEther('0.01')) {
-            logger.error('Insufficient ETH balance for gas fees. Required: 0.01 ETH');
+        const requiredEthForBattleships = ethers.parseEther('0.0007').add(ethers.parseEther('0.01')); // 0.0007 (value) + 0.01 (perkiraan gas)
+        if (ethBalance < requiredEthForBattleships) {
+            logger.error(`Insufficient ETH balance for gas fees and game value. Required: ${ethers.formatEther(requiredEthForBattleships)} ETH`);
             return;
         }
 
@@ -294,8 +308,9 @@ async function battleshipsGame(wallet, provider) {
             await playBattleships(wallet, provider, x, y);
             logger.success('Battleships game played successfully!');
         } catch (error) {
+            logger.warn(`Gagal dengan koordinat awal, mencoba koordinat baru: ${error.message}`);
             const newCoords = generateRandomCoordinates();
-            logger.warn(`Trying new coordinates: (${newCoords.x}, ${newCoords.y})`);
+            logger.info(`Mencoba koordinat baru: (${newCoords.x}, ${newCoords.y})`);
 
             try {
                 await playBattleships(wallet, provider, newCoords.x, newCoords.y);
