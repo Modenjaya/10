@@ -4,7 +4,7 @@ const axios = require('axios');
 const prompt = require('prompt-sync')({ sigint: true });
 
 const CHAIN_ID = 443;
-const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae';
+const ZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
 const BETTING_CONTRACT = '0x88fa5aA29BFd406Cd052595cCD8B1347913Aa1E7';
 const BATTLESHIPS_CONTRACT = '0xD64206151CEAE054962E2eD7aC16aad5e39c3Ef3';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
