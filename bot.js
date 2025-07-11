@@ -9,6 +9,14 @@ const BETTING_CONTRACT = '0x88fa5aA29BFd406Cd052595cCD8B1347913Aa1E7';
 const BATTLESHIPS_CONTRACT = '0xD64206151CEAE054962E2eD7aC16aad5e39c3Ef3';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
 
+// --- Tambahkan KONSTANTA untuk TENZEN ---
+const TENZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
+const TENZEN_FUNCTION_SELECTOR = '0x93e84cd9'; // Data untuk memulai Tenzen
+const TENZEN_VALUE_AMOUNT = ethers.parseEther('0.0028'); // 0xfbd0fc05ae000 dalam ETH
+const TENZEN_GAS_LIMIT = 170000; // Disesuaikan sedikit lebih tinggi dari 0x27b40 (162624) untuk margin
+const TENZEN_GAS_PRICE = ethers.parseUnits('120', 'gwei'); // Sesuai dengan 0x7270e00 (120 Gwei)
+// ----------------------------------------
+
 const AI_OPTIONS = [
     { name: 'CZHuffle', address: '0x9fde625ed8a6ec0f3ca393a62be34231a5c167f4' },
     { name: 'Vitalik Pokerin', address: '0x7B7057B07218fa9f357E39cb2fC2E723C2bfcf9F' },
@@ -61,7 +69,9 @@ function generateRandomCoordinates() {
 function displayMainMenu() {
     logger.step('Main Menu:');
     console.log(`${colors.cyan}1. HouseOfTen Game${colors.reset}`);
-    console.log(`${colors.cyan}2. Tenzen Game (Under Maintenance)${colors.reset}`);
+    // --- Ubah Tenzen dari "Under Maintenance" ---
+    console.log(`${colors.cyan}2. Tenzen Game${colors.reset}`);
+    // ---------------------------------------------
     console.log(`${colors.cyan}3. Battleships Game${colors.reset}`);
     console.log(`${colors.cyan}4. Dexynth Perpetual${colors.reset}`);
     console.log(`${colors.cyan}5. Chimp Dex${colors.reset}`);
@@ -75,10 +85,12 @@ function getMenuSelection() {
         logger.error('Invalid selection. Please choose a valid number.');
         return getMenuSelection();
     }
-    if (choice === 2) {
-        logger.error('Tenzen Game is currently under maintenance. Please choose another option.');
-        return getMenuSelection();
-    }
+    // --- Hapus logika "Under Maintenance" untuk Tenzen ---
+    // if (choice === 2) {
+    //     logger.error('Tenzen Game is currently under maintenance. Please choose another option.');
+    //     return getMenuSelection();
+    // }
+    // ---------------------------------------------------
     if (choice === 4) {
         logger.error('Dexynth Perpetual is Coming Soon. Please choose another option.');
         return getMenuSelection();
@@ -212,13 +224,11 @@ async function playBattleships(wallet, provider, x, y) {
         const txData = {
             to: BATTLESHIPS_CONTRACT,
             data: data,
-            gasLimit: 210000, // Pertimbangkan untuk menaikkan ini jika masih revert
-            gasPrice: ethers.parseUnits('130', 'gwei'), // Sesuaikan jika ingin mengikuti gasPrice manual
+            gasLimit: 210000,
+            gasPrice: ethers.parseUnits('130', 'gwei'),
             chainId: CHAIN_ID,
             nonce: nonce,
-            // --- TAMBAHKAN ATAU UBAH BARIS INI ---
-            value: ethers.parseEther('0.0028') // Nilai 0xfbd0fc05ae000 dalam ETH
-            // ------------------------------------
+            value: ethers.parseEther('0.0028') // Menambahkan value untuk Battleships
         };
 
         logger.info('Sending transaction with data:', {
@@ -228,7 +238,7 @@ async function playBattleships(wallet, provider, x, y) {
             gasPrice: txData.gasPrice.toString(),
             chainId: txData.chainId,
             nonce: txData.nonce,
-            value: txData.value ? txData.value.toString() : '0' // Menampilkan value di log
+            value: txData.value ? txData.value.toString() : '0'
         });
 
         const tx = await wallet.sendTransaction(txData);
@@ -246,6 +256,60 @@ async function playBattleships(wallet, provider, x, y) {
         throw error;
     }
 }
+
+// --- Tambahkan FUNGSI BARU untuk TENZEN ---
+async function playTenzenGame(wallet, provider) {
+    logger.loading(`Starting Tenzen Game for ${wallet.address}...`);
+    try {
+        const ethBalance = await checkETHBalance(wallet, provider);
+        if (ethBalance < TENZEN_VALUE_AMOUNT) {
+            logger.error(`Insufficient ETH balance for Tenzen. Required: ${ethers.formatEther(TENZEN_VALUE_AMOUNT)} ETH`);
+            return;
+        }
+        // Minimal gas ETH untuk transaksi
+        if (ethBalance < ethers.parseEther('0.005')) { // Sedikit margin untuk gas fee
+            logger.error('Insufficient ETH balance for gas fees. Required: at least 0.005 ETH');
+            return;
+        }
+
+        const nonce = await provider.getTransactionCount(wallet.address, 'latest');
+
+        const txData = {
+            to: TENZEN_CONTRACT,
+            data: TENZEN_FUNCTION_SELECTOR,
+            gasLimit: TENZEN_GAS_LIMIT,
+            gasPrice: TENZEN_GAS_PRICE,
+            chainId: CHAIN_ID,
+            nonce: nonce,
+            value: TENZEN_VALUE_AMOUNT
+        };
+
+        logger.info('Sending Tenzen transaction with data:', {
+            to: txData.to,
+            data: txData.data,
+            gasLimit: txData.gasLimit.toString(),
+            gasPrice: txData.gasPrice.toString(),
+            chainId: txData.chainId,
+            nonce: txData.nonce,
+            value: txData.value ? txData.value.toString() : '0'
+        });
+
+        const tx = await wallet.sendTransaction(txData);
+        logger.info(`Tenzen TX Hash: ${tx.hash}`);
+        const receipt = await tx.wait();
+
+        if (receipt.status === 0) {
+            throw new Error('Transaction reverted');
+        }
+
+        logger.success(`Tenzen TX confirmed in block ${receipt.blockNumber}`);
+        return receipt;
+    } catch (error) {
+        logger.error(`Error playing Tenzen Game for ${wallet.address}: ${error.message}`);
+        throw error;
+    }
+}
+// ------------------------------------------
 
 async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingContract, selectedAI, betAmountETH) {
     try {
@@ -281,14 +345,17 @@ async function battleshipsGame(wallet, provider) {
         let { x, y } = generateRandomCoordinates();
         logger.info(`Selected coordinates: (${x}, ${y})`);
 
-        const requiredZEN = ethers.parseEther('0.001');
+        // Periksa ZEN balance untuk Battleships (jika masih diperlukan, cek kontrak)
+        const requiredZEN = ethers.parseEther('0.001'); // Anda bisa sesuaikan ini jika ada biaya ZEN
         const zenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, wallet);
         const zenBalance = await checkZENBalance(wallet, zenContract);
         if (zenBalance < requiredZEN) {
-            logger.error(`Insufficient ZEN balance. Required: ${ethers.formatEther(requiredZEN)} ETH`);
-            return;
+            logger.warn(`ZEN balance for Battleships is less than ${ethers.formatEther(requiredZEN)} ETH. This might not be an issue if ZEN isn't strictly required for Battleships.`);
+            // return; // Nonaktifkan jika Battleships tidak selalu memerlukan ZEN
         }
+
         const ethBalance = await checkETHBalance(wallet, provider);
+        // Sesuaikan persyaratan ETH minimal untuk gas fee jika perlu
         if (ethBalance < ethers.parseEther('0.01')) {
             logger.error('Insufficient ETH balance for gas fees. Required: 0.01 ETH');
             return;
@@ -312,6 +379,7 @@ async function battleshipsGame(wallet, provider) {
         logger.error(`Battleships Game failed for ${wallet.address}: ${error.message}`);
     }
 }
+
 
 async function main() {
     logger.banner();
@@ -372,6 +440,8 @@ async function main() {
 
                 if (globalChoice === 1) {
                     await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
+                } else if (globalChoice === 2) { // --- Panggil fungsi Tenzen di sini ---
+                    await playTenzenGame(currentWallet, currentProvider);
                 } else if (globalChoice === 3) {
                     await battleshipsGame(currentWallet, currentProvider);
                 }
