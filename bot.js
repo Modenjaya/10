@@ -148,7 +148,7 @@ async function checkZENBalance(wallet, zenContract) {
     try {
         const balance = await zenContract.balanceOf(wallet.address);
         const balanceETH = formatEther(balance); 
-        logger.info(`ZEN Balance: ${balanceETH} ETH`);
+        logger.info(`ZEN Balance: ${balanceETH} ZEN`); // Changed to ZEN
         return balance;
     } catch (error) {
         logger.error(`Error checking ZEN balance for ${wallet.address}: ${error.message}`);
@@ -225,6 +225,41 @@ async function notifyHouseAPI(walletAddress, betAmount, aiAddress) {
         throw error;
     }
 }
+
+// --- NEW FUNCTION FOR HOUSEOFTEN GAME AUTOMATION ---
+async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingContract, selectedAI, betAmountZEN_String) {
+    logger.loading(`Starting HouseOfTen Game for ${wallet.address} against ${selectedAI.name}...`);
+    try {
+        // Parse the bet amount string into BigInt for ZEN (which has 18 decimals, like ETH)
+        const betAmountWei = parseEther(betAmountZEN_String); 
+
+        // 1. Check ZEN balance
+        const zenBalance = await checkZENBalance(wallet, zenContract);
+        if (zenBalance < betAmountWei) {
+            logger.error(`Insufficient ZEN balance. Required: ${betAmountZEN_String} ZEN. You have ${formatEther(zenBalance)} ZEN. Skipping this account.`);
+            return;
+        }
+
+        // 2. Approve ZEN for the betting contract
+        logger.step(`Approving ${betAmountZEN_String} ZEN for the Betting Contract (${BETTING_CONTRACT})...`);
+        await approveZEN(wallet, zenContract, BETTING_CONTRACT, betAmountWei);
+
+        // 3. Place the bet
+        // Assuming betType 0 for simplicity, adjust if different bet types are needed based on game logic
+        logger.step(`Placing bet of ${betAmountZEN_String} ZEN against ${selectedAI.name}...`);
+        await placeBet(wallet, bettingContract, 0, selectedAI.address, betAmountWei);
+
+        // 4. Notify HouseOfTen API
+        logger.step('Notifying HouseOfTen API...');
+        await notifyHouseAPI(wallet.address, parseFloat(betAmountZEN_String), selectedAI.address); // API usually expects float
+
+        logger.success('HouseOfTen game played successfully!');
+    } catch (error) {
+        logger.error(`HouseOfTen Game failed for ${wallet.address}: ${error.message}`);
+        throw error; 
+    }
+}
+// --- END NEW FUNCTION ---
 
 async function playBattleships(wallet, provider, x, y) {
     logger.loading(`Playing Battleships game at coordinates (${x}, ${y}) for ${wallet.address}...`);
@@ -556,16 +591,16 @@ async function main() {
             break;
         }
 
-        let betAmountETH = null;
-        let bridgeAmountETH = null; // Variabel baru untuk jumlah bridge
+        let betAmountZEN = null; // Changed from betAmountETH
+        let bridgeAmountETH = null; 
         let selectedAI = null;
         let rounds = 1;
 
         if (globalChoice === 1) { // HouseOfTen Game
             selectedAI = getAISelection();
             logger.info(`Selected AI for all accounts: ${selectedAI.name} (${selectedAI.address})`);
-            betAmountETH = prompt('Enter bet amount in ETH (e.g., 0.01) for all accounts: ');
-            if (isNaN(parseFloat(betAmountETH)) || parseFloat(betAmountETH) <= 0) {
+            betAmountZEN = prompt('Enter bet amount in ZEN (e.g., 0.0001) for all accounts: '); // Prompt for ZEN
+            if (isNaN(parseFloat(betAmountZEN)) || parseFloat(betAmountZEN) <= 0) {
                 logger.error('Invalid bet amount. Returning to main menu.');
                 console.log('\n');
                 continue;
@@ -614,7 +649,7 @@ async function main() {
                     logger.info(`Using Sepolia RPC: ${account.rpcUrlSepolia}`);
 
                     if (globalChoice === 1) {
-                        await houseOfTenGameAutomated(currentWalletTen, currentProviderTen, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
+                        await houseOfTenGameAutomated(currentWalletTen, currentProviderTen, currentZenContract, currentBettingContract, selectedAI, betAmountZEN); // Use betAmountZEN
                     } else if (globalChoice === 2) {
                         await playTenzenGame(currentWalletTen, currentProviderTen);
                     } else if (globalChoice === 3) {
