@@ -470,6 +470,8 @@ async function handleBridgeOrNewGame2(wallet, provider, amountToPayETH) {
 }
 
 
+// ... (bagian atas skrip tetap sama) ...
+
 async function main() {
     logger.banner();
 
@@ -516,12 +518,6 @@ async function main() {
                 console.log('\n');
                 continue;
             }
-            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
-            if (!isNaN(roundsInput) && roundsInput > 0) {
-                rounds = roundsInput;
-            } else {
-                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
-            }
         } else if (globalChoice === 2 || globalChoice === 6 || globalChoice === 7) { // Tenzen, Bridge/Game Baru
             amountToPay = prompt('Enter the amount of ETH to pay (e.g., 0.001): ');
             if (isNaN(parseFloat(amountToPay)) || parseFloat(amountToPay) <= 0) {
@@ -529,21 +525,18 @@ async function main() {
                 console.log('\n');
                 continue;
             }
-            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
-            if (!isNaN(roundsInput) && roundsInput > 0) {
-                rounds = roundsInput;
-            } else {
-                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
-            }
-        } else if (globalChoice === 3) { // Battleships Game (Tidak ada prompt jumlah spesifik)
-            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
-            if (!isNaN(roundsInput) && roundsInput > 0) {
-                rounds = roundsInput;
-            } else {
-                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
-            }
         }
-        // --- Akhir logika input jumlah ---
+        // Pilihan 3 (Battleships) tidak memiliki prompt jumlah spesifik di sini.
+        // Pilihan 4 dan 5 adalah "Coming Soon"
+
+        // Prompt rounds setelah input jumlah/AI
+        const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
+        if (!isNaN(roundsInput) && roundsInput > 0) {
+            rounds = roundsInput;
+        } else {
+            logger.warn('Invalid number of rounds. Defaulting to 1 round.');
+        }
+        // --- Akhir logika input jumlah dan rounds ---
 
 
         for (let r = 0; r < rounds; r++) { // Loop untuk putaran
@@ -554,9 +547,6 @@ async function main() {
                     const currentProvider = new ethers.JsonRpcProvider(account.rpcUrl);
                     const currentWallet = new ethers.Wallet(account.privateKey, currentProvider);
 
-                    // PENTING: Periksa kembali alamat ZEN_CONTRACT.
-                    // Saat ini disetel ke 0xDa701a7231096209C4F5AC83F44F22eFA75f4519 (alamat Tenzen_Contract).
-                    // Jika ini bukan token ZEN yang sebenarnya, interaksi ZEN (approve, balance) akan gagal.
                     const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWallet);
                     const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWallet);
 
@@ -595,6 +585,9 @@ async function main() {
     logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
 }
 
+// ... (sisa fungsi lainnya tetap sama seperti yang saya berikan di balasan sebelumnya) ...
+// Pastikan TENZEN_VALUE_AMOUNT tidak digunakan lagi di playTenzenGame
+// Dan tambahkan fungsi handleBridgeOrNewGame1, handleBridgeOrNewGame2 jika belum ada.
 main().catch((error) => {
     logger.error(`Fatal error: ${error.message}`);
     process.exit(1);
