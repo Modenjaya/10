@@ -147,8 +147,8 @@ async function checkZENBalance(wallet, zenContract) {
     logger.loading(`Checking ZEN balance for ${wallet.address}...`);
     try {
         const balance = await zenContract.balanceOf(wallet.address);
-        const balanceETH = formatEther(balance); 
-        logger.info(`ZEN Balance: ${balanceETH} ZEN`); // Changed to ZEN
+        const balanceFormatted = formatEther(balance); 
+        logger.info(`ZEN Balance: ${balanceFormatted} ZEN`); // Changed to ZEN
         return balance;
     } catch (error) {
         logger.error(`Error checking ZEN balance for ${wallet.address}: ${error.message}`);
@@ -160,8 +160,8 @@ async function checkETHBalance(wallet, provider, chainName = 'ETH') {
     logger.loading(`Checking ${chainName} balance for ${wallet.address}...`);
     try {
         const balance = await provider.getBalance(wallet.address);
-        const balanceETH = formatEther(balance); 
-        logger.info(`${chainName} Balance: ${balanceETH} ETH`);
+        const balanceFormatted = formatEther(balance); 
+        logger.info(`${chainName} Balance: ${balanceFormatted} ETH`);
         return balance;
     } catch (error) {
         logger.error(`Error checking ${chainName} balance for ${wallet.address}: ${error.message}`);
