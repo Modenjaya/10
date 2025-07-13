@@ -1,22 +1,18 @@
 // TEN PROKONTOL
 require('dotenv').config();
 const ethers = require('ethers');
-// Destructuring ethers untuk akses yang lebih mudah dan konsisten
 const { formatEther, parseEther, parseUnits, toBigInt } = ethers;
 const axios = require('axios');
 const prompt = require('prompt-sync')({ sigint: true });
 
-// --- KONSTANTA BRIDGE ---
+
 const SEPOLIA_CHAIN_ID = 11155111;
 const TEN_CHAIN_ID = 443; 
 
-// Kontrak Bridge di Sepolia. Alamat ini didapat dari 'to' di raw data Sepolia -> Ten.
 const SEPOLIA_BRIDGE_CONTRACT = '0x007522bfE81C3a2ff8D885b65eEc2C9b68E30348';
-// Kontrak Bridge di Ten. Alamat ini didapat dari 'to' di raw data Ten -> Sepolia.
 const TEN_BRIDGE_CONTRACT = '0x796EFCB0941Cf84aa7079e124dB8b5D3082A76Fb';
-// Function selector untuk deposit ETH. Sama di kedua arah.
 const BRIDGE_DEPOSIT_FUNCTION_SELECTOR = '0x1888d712';
-// --- AKHIR KONSTANTA BRIDGE ---
+
 
 const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae'; 
 const BETTING_CONTRACT = '0xc288b41e88cc04dfec6e81df8b705791e94a0b64';
@@ -28,7 +24,7 @@ const BATTLESHIPS_VALUE_AMOUNT = '0xfbd0fc05ae000';
 const TENZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
 const TENZEN_FUNCTION_SELECTOR = '0x93e84cd9';
 const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000';
-const TENZEN_GAS_PRICE = parseUnits('120', 'gwei'); // Menggunakan parseUnits
+const TENZEN_GAS_PRICE = parseUnits('120', 'gwei'); 
 const TENZEN_GAS_LIMIT = 128453;
 
 const AI_OPTIONS = [
