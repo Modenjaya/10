@@ -247,7 +247,7 @@ async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingCon
         // 3. Place the bet
         // Assuming betType 0 for simplicity, adjust if different bet types are needed based on game logic
         logger.step(`Placing bet of ${betAmountZEN_String} ZEN against ${selectedAI.name}...`);
-        await placeBet(wallet, bettingContract, 0, selectedAI.address, betAmountWei);
+        await placeBet(wallet, bettingContract, 1, selectedAI.address, betAmountWei);
 
         // 4. Notify HouseOfTen API
         logger.step('Notifying HouseOfTen API...');
