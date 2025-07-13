@@ -1,42 +1,35 @@
+// TEN PROKONTOL
 require('dotenv').config();
 const ethers = require('ethers');
+// Destructuring ethers untuk akses yang lebih mudah dan konsisten
+const { formatEther, parseEther, parseUnits, toBigInt } = ethers;
 const axios = require('axios');
 const prompt = require('prompt-sync')({ sigint: true });
 
-const CHAIN_ID = 443; // Ten Testnet Chain ID
+// --- KONSTANTA BRIDGE ---
+const SEPOLIA_CHAIN_ID = 11155111;
+const TEN_CHAIN_ID = 443; 
 
-// PASTIKAN ALAMAT INI BENAR:
-// ZEN_CONTRACT: Alamat kontrak token ZEN yang sebenarnya.
-// TENZEN_CONTRACT: Alamat kontrak game Tenzen yang berinteraksi dengan ZEN.
-// Jika ZEN_CONTRACT ini adalah alamat token, dan TENZEN_CONTRACT adalah alamat game, ini harus berbeda!
-// Sesuai dengan konstanta Anda: ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae'
-// Sesuai dengan konstanta Anda: TENZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519'
-// Ini sudah benar-benar berbeda, jadi kita akan interaksi dengan ZEN_CONTRACT untuk token,
-// dan TENZEN_CONTRACT untuk game.
-const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae';
+// Kontrak Bridge di Sepolia. Alamat ini didapat dari 'to' di raw data Sepolia -> Ten.
+const SEPOLIA_BRIDGE_CONTRACT = '0x007522bfE81C3a2ff8D885b65eEc2C9b68E30348';
+// Kontrak Bridge di Ten. Alamat ini didapat dari 'to' di raw data Ten -> Sepolia.
+const TEN_BRIDGE_CONTRACT = '0x796EFCB0941Cf84aa7079e124dB8b5D3082A76Fb';
+// Function selector untuk deposit ETH. Sama di kedua arah.
+const BRIDGE_DEPOSIT_FUNCTION_SELECTOR = '0x1888d712';
+// --- AKHIR KONSTANTA BRIDGE ---
+
+const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae'; 
 const BETTING_CONTRACT = '0xc288b41e88cc04dfec6e81df8b705791e94a0b64';
 const BATTLESHIPS_CONTRACT = '0xD64206151CEAE054962E2eD7aC16aad5e39c3Ef3';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
 
-// --- Konstanta Battleships ---
-const BATTLESHIPS_VALUE_AMOUNT = '0xfbd0fc05ae000'; // Value Battleships dalam heksadesimal (tetap ETH)
+const BATTLESHIPS_VALUE_AMOUNT = '0xfbd0fc05ae000'; 
 
-// Konstanta TENZEN (GAME CONTRACT)
 const TENZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
 const TENZEN_FUNCTION_SELECTOR = '0x93e84cd9';
-// TENZEN_VALUE_AMOUNT (dari sebelumnya) ini sepertinya adalah ETH, tapi Tenzen Game
-// sekarang akan menggunakan ZEN yang di-approve. Jadi ini mungkin tidak lagi relevan
-// jika game Tenzen memang tidak menerima ETH value saat dipanggil, tapi hanya ZEN token.
-// Jika game Tenzen butuh ETH *dan* ZEN, kita perlu klarifikasi. Untuk saat ini,
-// kita asumsikan ia hanya memproses ZEN via approve/transferFrom.
-// const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000';
-const TENZEN_GAS_PRICE = ethers.parseUnits('120', 'gwei');
-const TENZEN_GAS_LIMIT = 128453; // Gas limit untuk memanggil fungsi Tenzen
-
-// --- Konstanta Bridge (Contoh) ---
-// Ganti dengan alamat kontrak bridge yang sebenarnya untuk setiap arah
-const BRIDGE_SEPOLIA_TO_TEN_CONTRACT = '0xYourSepoliaToTenBridgeContractAddress'; // Contoh alamat bridge
-const BRIDGE_TEN_TO_SEPOLIA_CONTRACT = '0xYourTenToSepoliaBridgeContractAddress';   // Contoh alamat bridge
+const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000';
+const TENZEN_GAS_PRICE = parseUnits('120', 'gwei'); // Menggunakan parseUnits
+const TENZEN_GAS_LIMIT = 128453;
 
 const AI_OPTIONS = [
     { name: 'CZHuffle', address: '0x9fde625ed8a6ec0f3ca393a62be34231a5c167f4' },
@@ -54,8 +47,10 @@ const colors = {
     red: '\x1b[31m',
     white: '\x1b[37m',
     bold: '\x1b[1m',
+    gray: '\x1b[90m',
 };
 
+const gameMessageLogs = [];
 const logger = {
     info: (msg) => console.log(`${colors.green}[✓] ${msg}${colors.reset}`),
     wallet: (msg) => console.log(`${colors.yellow}[➤] ${msg}${colors.reset}`),
@@ -70,6 +65,20 @@ const logger = {
         console.log(` TEN PEPEK `);
         console.log(`---------------------------------------------${colors.reset}\n`);
     },
+    gameLog: (msg) => {
+        const formattedMsg = `${colors.gray}[GAME LOG] ${msg}${colors.reset}`;
+        console.log(formattedMsg);
+        gameMessageLogs.push(msg);
+    },
+    displayGameLogs: () => {
+        console.log(`\n${colors.bold}${colors.gray}--- BATTLESHIPS MESSAGE LOG ---${colors.reset}`);
+        if (gameMessageLogs.length === 0) {
+            console.log(`${colors.gray}    No game messages yet.${colors.reset}`);
+        } else {
+            gameMessageLogs.forEach(log => console.log(`${colors.gray}    ${log}${colors.reset}`));
+        }
+        console.log(`${colors.bold}${colors.gray}-------------------------------${colors.reset}\n`);
+    }
 };
 
 // ABI Contracts
@@ -79,14 +88,6 @@ const zenABI = [
 ];
 
 const bettingABI = ['function placeBet(uint256 betType, address aiAddress, uint256 amount) public'];
-
-// --- Tambahan ABI untuk Bridge jika perlu interaksi fungsi spesifik ---
-// Contoh: Jika kontrak bridge punya fungsi `depositETH` atau `bridgeETH`
-const bridgeABI = [
-    'function depositETH() payable', // Contoh fungsi untuk deposit/bridge ETH
-    // Tambahkan fungsi lain sesuai ABI kontrak bridge Anda
-];
-
 
 function generateRandomCoordinates() {
     return {
@@ -98,19 +99,19 @@ function generateRandomCoordinates() {
 function displayMainMenu() {
     logger.step('Main Menu:');
     console.log(`${colors.cyan}1. HouseOfTen Game${colors.reset}`);
-    console.log(`${colors.cyan}2. Tenzen Game${colors.reset}`); // Akan ada prompt jumlah ZEN
+    console.log(`${colors.cyan}2. Tenzen Game${colors.reset}`);
     console.log(`${colors.cyan}3. Battleships Game${colors.reset}`);
-    console.log(`${colors.cyan}4. Dexynth Perpetual (Coming Soon)${colors.reset}`);
-    console.log(`${colors.cyan}5. Chimp Dex (Coming Soon)${colors.reset}`);
-    console.log(`${colors.cyan}6. Bridge Sepolia to Ten Testnet (ETH)${colors.reset}`); // Akan ada prompt jumlah ETH
-    console.log(`${colors.cyan}7. Bridge Ten Testnet to Sepolia (ETH)${colors.reset}`); // Akan ada prompt jumlah ETH
-    console.log(`${colors.cyan}8. Exit${colors.reset}`);
+    console.log(`${colors.cyan}4. Dexynth Perpetual${colors.reset}`);
+    console.log(`${colors.cyan}5. Chimp Dex${colors.reset}`);
+    console.log(`${colors.cyan}6. Bridge Sepolia to Ten Testnet (ETH)${colors.reset}`);
+    console.log(`${colors.cyan}7. Bridge Ten Testnet to Sepolia (ETH)${colors.reset}`); 
+    console.log(`${colors.cyan}8. Exit${colors.reset}`); 
 }
 
 function getMenuSelection() {
     displayMainMenu();
     const choice = parseInt(prompt('Enter the number of your choice: '));
-    if (isNaN(choice) || choice < 1 || choice > 8) {
+    if (isNaN(choice) || choice < 1 || choice > 8) { 
         logger.error('Invalid selection. Please choose a valid number.');
         return getMenuSelection();
     }
@@ -146,8 +147,8 @@ async function checkZENBalance(wallet, zenContract) {
     logger.loading(`Checking ZEN balance for ${wallet.address}...`);
     try {
         const balance = await zenContract.balanceOf(wallet.address);
-        const balanceETH = ethers.formatEther(balance); // ZEN mungkin bukan ETH, tapi formatnya sama
-        logger.info(`ZEN Balance: ${balanceETH} ZEN`); // Ganti ETH menjadi ZEN
+        const balanceETH = formatEther(balance); 
+        logger.info(`ZEN Balance: ${balanceETH} ETH`);
         return balance;
     } catch (error) {
         logger.error(`Error checking ZEN balance for ${wallet.address}: ${error.message}`);
@@ -155,21 +156,21 @@ async function checkZENBalance(wallet, zenContract) {
     }
 }
 
-async function checkETHBalance(wallet, provider) {
-    logger.loading(`Checking ETH balance for ${wallet.address}...`);
+async function checkETHBalance(wallet, provider, chainName = 'ETH') {
+    logger.loading(`Checking ${chainName} balance for ${wallet.address}...`);
     try {
         const balance = await provider.getBalance(wallet.address);
-        const balanceETH = ethers.formatEther(balance);
-        logger.info(`ETH Balance: ${balanceETH} ETH`);
+        const balanceETH = formatEther(balance); 
+        logger.info(`${chainName} Balance: ${balanceETH} ETH`);
         return balance;
     } catch (error) {
-        logger.error(`Error checking ETH balance for ${wallet.address}: ${error.message}`);
+        logger.error(`Error checking ${chainName} balance for ${wallet.address}: ${error.message}`);
         throw error;
     }
 }
 
 async function approveZEN(wallet, zenContract, spender, amount) {
-    logger.loading(`Approving ${ethers.formatEther(amount)} ZEN for ${spender} from ${wallet.address}...`);
+    logger.loading(`Approving ${formatEther(amount)} ZEN for ${spender} from ${wallet.address}...`); 
     try {
         const tx = await zenContract.connect(wallet).approve(spender, amount);
         logger.info(`Approve TX Hash: ${tx.hash}`);
@@ -183,7 +184,7 @@ async function approveZEN(wallet, zenContract, spender, amount) {
 }
 
 async function placeBet(wallet, bettingContract, betType, aiAddress, amount) {
-    logger.loading(`Placing bet of ${ethers.formatEther(amount)} ZEN from ${wallet.address}...`);
+    logger.loading(`Placing bet of ${formatEther(amount)} ZEN from ${wallet.address}...`); 
     try {
         const tx = await bettingContract.connect(wallet).placeBet(betType, aiAddress, amount, {
             gasLimit: 300000,
@@ -247,11 +248,11 @@ async function playBattleships(wallet, provider, x, y) {
         const txData = {
             to: BATTLESHIPS_CONTRACT,
             data: data,
-            gasLimit: 210000,
-            gasPrice: ethers.parseUnits('130', 'gwei'),
-            chainId: CHAIN_ID,
+            gasLimit: 250000, 
+            gasPrice: parseUnits('20', 'gwei'), 
+            chainId: TEN_CHAIN_ID, 
             nonce: nonce,
-            value: BATTLESHIPS_VALUE_AMOUNT // Menggunakan nilai heksadesimal langsung
+            value: BATTLESHIPS_VALUE_AMOUNT
         };
 
         logger.info('Sending transaction with data:', {
@@ -273,52 +274,40 @@ async function playBattleships(wallet, provider, x, y) {
         }
 
         logger.success(`Play TX confirmed in block ${receipt.blockNumber}`);
+        
+        logger.gameLog(`TARGET STRIKE TX: ${tx.hash}`);
+        logger.gameLog(`STRIKING TARGET at (${x}, ${y})...`);
+        logger.gameLog(`GRAVEYARD INFO UPDATED.`); 
+
         return receipt;
     } catch (error) {
         logger.error(`Error playing Battleships game at (${x}, ${y}) for ${wallet.address}: ${error.message}`);
+        logger.gameLog(`SHOT FAILED at (${x}, ${y}). Error: ${error.message}`); 
         throw error;
     }
 }
 
-// --- FUNGSI TENZEN GAME YANG BENAR-BENAR MENGGUNAKAN TOKEN ZEN ---
-async function playTenzenGame(wallet, provider, zenAmount) { // Parameter zenAmount
-    logger.loading(`Starting Tenzen Game for ${wallet.address} with ${zenAmount} ZEN...`);
+async function playTenzenGame(wallet, provider) {
+    logger.loading(`Starting Tenzen Game for ${wallet.address}...`);
     try {
-        const amountWei = ethers.parseEther(zenAmount); // Asumsi ZEN memiliki 18 desimal seperti ETH
-
-        // Periksa saldo ZEN
-        const zenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, wallet);
-        const zenBalance = await checkZENBalance(wallet, zenContract);
-        if (zenBalance < amountWei) {
-            logger.error(`Insufficient ZEN balance. Required: ${ethers.formatEther(amountWei)} ZEN`);
+        const ethBalance = await checkETHBalance(wallet, provider, 'TenETH');
+        const requiredValueBigInt = toBigInt(TENZEN_VALUE_AMOUNT); 
+        
+        if (ethBalance < requiredValueBigInt + parseEther('0.005')) { 
+            logger.error(`Insufficient TenETH balance for Tenzen. Required: at least ${formatEther(requiredValueBigInt + parseEther('0.005'))} TenETH`); 
             return;
         }
 
-        // Periksa saldo ETH untuk biaya gas
-        const ethBalance = await checkETHBalance(wallet, provider);
-        if (ethBalance < ethers.parseEther('0.01')) { // Margin untuk gas
-            logger.error('Insufficient ETH balance for gas fees. Required: 0.01 ETH');
-            return;
-        }
-
-        // 1. Approve ZEN untuk kontrak TENZEN_CONTRACT
-        logger.step(`Approving ${zenAmount} ZEN for Tenzen Contract (${TENZEN_CONTRACT})...`);
-        await approveZEN(wallet, zenContract, TENZEN_CONTRACT, amountWei);
-
-        // 2. Panggil fungsi di kontrak TENZEN_CONTRACT
-        logger.step(`Calling Tenzen Contract (${TENZEN_CONTRACT}) with function selector ${TENZEN_FUNCTION_SELECTOR}...`);
         const nonce = await provider.getTransactionCount(wallet.address, 'latest');
 
         const txData = {
             to: TENZEN_CONTRACT,
-            data: TENZEN_FUNCTION_SELECTOR, // Asumsi selector ini sudah termasuk data untuk jumlah ZEN yang akan ditarik oleh kontrak
-                                            // Jika kontrak Tenzen memiliki fungsi lain yang menerima jumlah, ABI harus ditambahkan
-                                            // dan fungsi tersebut dipanggil dengan parameter jumlah.
+            data: TENZEN_FUNCTION_SELECTOR,
             gasLimit: TENZEN_GAS_LIMIT,
             gasPrice: TENZEN_GAS_PRICE,
-            chainId: CHAIN_ID,
+            chainId: TEN_CHAIN_ID,
             nonce: nonce,
-            value: 0 // PENTING: Tenzen Game ini TIDAK MENGIRIM ETH sebagai value, tapi berinteraksi dengan ZEN.
+            value: TENZEN_VALUE_AMOUNT
         };
 
         logger.info('Sending Tenzen transaction with data:', {
@@ -328,7 +317,7 @@ async function playTenzenGame(wallet, provider, zenAmount) { // Parameter zenAmo
             gasPrice: txData.gasPrice.toString(),
             chainId: txData.chainId,
             nonce: txData.nonce,
-            value: txData.value.toString() // Pastikan value 0
+            value: txData.value ? txData.value.toString() : '0'
         });
 
         const tx = await wallet.sendTransaction(txData);
@@ -347,162 +336,182 @@ async function playTenzenGame(wallet, provider, zenAmount) { // Parameter zenAmo
     }
 }
 
-async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingContract, selectedAI, betAmountETH) {
-    try {
-        logger.step(`Starting HouseOfTen Game for ${wallet.address} (AI: ${selectedAI.name}, Bet: ${betAmountETH} ETH)...`);
-        const betAmountWei = ethers.parseEther(betAmountETH);
-        const betType = 1;
-
-        const zenBalance = await checkZENBalance(wallet, zenContract);
-        if (zenBalance < betAmountWei) {
-            logger.error(`Insufficient ZEN balance. Required: ${ethers.formatEther(betAmountWei)} ZEN`); // Pastikan ini ZEN
-            return;
-        }
-        const ethBalance = await checkETHBalance(wallet, provider);
-        if (ethBalance < ethers.parseEther('0.01')) {
-            logger.error('Insufficient ETH balance for gas fees. Required: 0.01 ETH');
-            return;
-        }
-
-        await approveZEN(wallet, zenContract, BETTING_CONTRACT, betAmountWei);
-        await placeBet(wallet, bettingContract, betType, selectedAI.address, betAmountWei);
-        await notifyHouseAPI(wallet.address, betAmountETH, selectedAI.address);
-
-        logger.success('HouseOfTen bet placed successfully!');
-    } catch (error) {
-        logger.error(`HouseOfTen Game failed for ${wallet.address}: ${error.message}`);
-    }
-}
+const globalShotCoordinates = new Set(); 
 
 async function battleshipsGame(wallet, provider) {
     try {
         logger.step('Starting Battleships Game...');
 
-        let { x, y } = generateRandomCoordinates();
+        const ethBalance = await checkETHBalance(wallet, provider, 'TenETH');
+        const requiredValueBigInt = toBigInt(BATTLESHIPS_VALUE_AMOUNT); 
+        const gasPrice = parseUnits('20', 'gwei'); 
+        const gasLimit = 250000; 
+        const estimatedGasCost = BigInt(gasLimit) * gasPrice;
+        const totalCost = requiredValueBigInt + estimatedGasCost;
+
+        if (ethBalance < totalCost) {
+            logger.error(`Insufficient TenETH balance for Battleships. Required: ~${formatEther(totalCost)} TenETH, but you only have ${formatEther(ethBalance)} TenETH.`); 
+            logger.error('Please add more testnet ETH to your wallet.');
+            return; 
+        }
+
+        let x, y;
+        let coordKey;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 20;
+
+        do {
+            ({ x, y } = generateRandomCoordinates());
+            coordKey = `${x},${y}`;
+            attempts++;
+            if (attempts > MAX_ATTEMPTS) {
+                logger.error('Failed to find unique coordinates after multiple attempts. All coordinates might be shot or range is too small.');
+                logger.gameLog('Failed to find unique coordinates.');
+                return;
+            }
+        } while (globalShotCoordinates.has(coordKey));
+
         logger.info(`Selected coordinates: (${x}, ${y})`);
-
-        const requiredZEN = ethers.parseEther('0.001'); // Ini masih ada, jika Battleships TIDAK pakai ZEN, hapus
-        const zenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, wallet);
-        const zenBalance = await checkZENBalance(wallet, zenContract);
-        if (zenBalance < requiredZEN) {
-            logger.warn(`ZEN balance for Battleships is less than ${ethers.formatEther(requiredZEN)} ZEN. This might not be an issue if ZEN isn't strictly required for Battleships and it only uses ETH.`);
-        }
-
-        const ethBalance = await checkETHBalance(wallet, provider);
-        const requiredBattleshipsValueBigInt = ethers.toBigInt(BATTLESHIPS_VALUE_AMOUNT);
-
-        if (ethBalance < requiredBattleshipsValueBigInt + ethers.parseEther('0.01')) { // 0.01 ETH sebagai margin gas
-            logger.error(`Insufficient ETH balance for Battleships. Required: at least ${ethers.formatEther(requiredBattleshipsValueBigInt + ethers.parseEther('0.01'))} ETH`);
-            return;
-        }
 
         try {
             await playBattleships(wallet, provider, x, y);
+            globalShotCoordinates.add(coordKey); 
             logger.success('Battleships game played successfully!');
         } catch (error) {
-            const newCoords = generateRandomCoordinates();
-            logger.warn(`Trying new coordinates: (${newCoords.x}, ${newCoords.y})`);
-
-            try {
-                await playBattleships(wallet, provider, newCoords.x, newCoords.y);
-                logger.success('Battleships game played successfully with new coordinates!');
-            } catch (error) {
-                logger.error(`Battleships Game failed after trying 2 different coordinates for ${wallet.address}: ${error.message}`);
-            }
+            logger.error(`Battleships Game failed at (${x}, ${y}) for ${wallet.address}: ${error.message}`);
         }
     } catch (error) {
         logger.error(`Battleships Game failed for ${wallet.address}: ${error.message}`);
     }
 }
 
-// --- FUNGSI BRIDGE ETH SEPOLIA KE TEN TESTNET (PILIHAN 6) ---
-async function handleBridgeSepoliaToTen(wallet, provider, ethAmount) {
-    logger.loading(`Starting Bridge Sepolia to Ten Testnet for ${wallet.address} with ${ethAmount} ETH...`);
-    // NOTE: Fungsi ini perlu dijalankan dengan provider Sepolia dan wallet yang terhubung ke Sepolia.
-    // Jika Anda menjalankan bot ini dengan banyak akun, pastikan Anda menggunakan RPC_URL yang sesuai
-    // atau memiliki logika untuk beralih jaringan di sini.
-    // Untuk kesederhanaan bot multi-akun yang diberikan, ini diasumsikan bot selalu di jaringan Ten.
-    // BRIDGE INI AKAN GAGAL JIKA WALLET TIDAK TERKONEKSI KE SEPOLIA.
 
+async function bridgeEthToTen(wallet, sepoliaRpcUrl, tenWalletAddress, amountToBridgeETH) {
+    logger.step(`Initiating Bridge from Sepolia to Ten Testnet for ${wallet.address}...`);
+    let sepoliaProvider;
     try {
-        const valueToSend = ethers.parseEther(ethAmount);
-        // Anda perlu provider Sepolia untuk ini.
-        // Asumsi currentProvider di main() adalah provider Ten.
-        // Anda perlu membuat provider Sepolia baru atau menggunakan akun yang memiliki RPC Sepolia.
-        // Contoh: const sepoliaProvider = new ethers.JsonRpcProvider('URL_RPC_SEPOLIA_ANDA');
-        // const sepoliaWallet = new ethers.Wallet(wallet.privateKey, sepoliaProvider);
+        sepoliaProvider = new ethers.JsonRpcProvider(sepoliaRpcUrl);
+        const sepoliaWallet = new ethers.Wallet(wallet.privateKey, sepoliaProvider);
 
-        // Untuk demonstrasi, kita akan melanjutkan dengan asumsi bahwa RPC yang digunakan adalah RPC target,
-        // yang berarti pengguna harus memilih akun yang terhubung ke Sepolia.
-        // ATAU Anda harus memodifikasi cara akun dimuat untuk memiliki provider Sepolia dan Ten.
+        const amountToBridgeWei = parseEther(amountToBridgeETH); 
 
-        // Memeriksa saldo ETH di jaringan asal (Sepolia)
-        const ethBalance = await checkETHBalance(wallet, provider); // Ini akan cek di jaringan yang saat ini terhubung (Ten)
-                                                                    // Jika ini bridge dari Sepolia, ini harus check balance di Sepolia.
-                                                                    // Ini adalah kompleksitas bot multi-chain.
-        if (ethBalance < valueToSend + ethers.parseEther('0.01')) { // Margin untuk gas
-            logger.error(`Insufficient ETH balance for Bridge (on current chain). Required: at least ${ethers.formatEther(valueToSend + ethers.parseEther('0.01'))} ETH`);
-            logger.warn('Please ensure your wallet is connected to Sepolia and has sufficient ETH for this bridge operation.');
+        if (isNaN(parseFloat(amountToBridgeETH)) || parseFloat(amountToBridgeETH) <= 0) {
+            logger.error('Invalid bridge amount provided. Please check the initial input.');
             return;
         }
 
-        // Interaksi dengan kontrak bridge di Sepolia (jika diperlukan)
-        const bridgeContract = new ethers.Contract(BRIDGE_SEPOLIA_TO_TEN_CONTRACT, bridgeABI, wallet);
+        logger.info(`Attempting to bridge ${amountToBridgeETH} ETH from Sepolia to Ten Testnet...`);
 
-        logger.step(`Initiating bridge from Sepolia to Ten Testnet...`);
-        const tx = await bridgeContract.depositETH({ // Contoh fungsi deposit, ganti sesuai ABI
-            value: valueToSend,
-            gasLimit: 200000, // Sesuaikan
-            gasPrice: ethers.parseUnits('20', 'gwei'), // Sesuaikan untuk Sepolia
+        const sepoliaEthBalance = await checkETHBalance(sepoliaWallet, sepoliaProvider, 'SepoliaETH');
+        if (sepoliaEthBalance < amountToBridgeWei + parseEther('0.0001')) { 
+            logger.error(`Insufficient Sepolia ETH balance. Required: at least ${formatEther(amountToBridgeWei + parseEther('0.0001'))} ETH. Skipping this account.`); 
+            return;
+        }
+
+        const nonce = await sepoliaProvider.getTransactionCount(sepoliaWallet.address, 'latest');
+
+        const data = BRIDGE_DEPOSIT_FUNCTION_SELECTOR + tenWalletAddress.substring(2).padStart(64, '0');
+
+        const txData = {
+            to: SEPOLIA_BRIDGE_CONTRACT,
+            data: data,
+            value: amountToBridgeWei,
+            chainId: SEPOLIA_CHAIN_ID,
+            nonce: nonce,
+            gasLimit: 300000, 
+            gasPrice: parseUnits('15', 'gwei') 
+        };
+
+        logger.info('Sending bridge transaction from Sepolia with data:', {
+            to: txData.to,
+            data: txData.data,
+            value: formatEther(txData.value), 
+            chainId: txData.chainId,
+            nonce: txData.nonce,
+            gasLimit: txData.gasLimit.toString(),
+            gasPrice: txData.gasPrice.toString()
         });
 
-        logger.info(`Bridge TX Hash: ${tx.hash}`);
+        const tx = await sepoliaWallet.sendTransaction(txData);
+        logger.info(`Bridge TX Hash (Sepolia): ${tx.hash}`);
+        logger.loading('Waiting for bridge transaction to be confirmed on Sepolia...');
         const receipt = await tx.wait();
 
         if (receipt.status === 0) {
-            throw new Error('Bridge transaction reverted');
+            throw new Error('Bridge transaction reverted on Sepolia.');
         }
-        logger.success(`Bridge Sepolia to Ten Testnet TX confirmed in block ${receipt.blockNumber}`);
+
+        logger.success(`Bridge TX confirmed on Sepolia in block ${receipt.blockNumber}!`);
+        logger.success('ETH should now be processing to appear on Ten Testnet.');
+        logger.warn('Please note: Bridging can take several minutes to hours, depending on network congestion and bridge finality.');
 
     } catch (error) {
-        logger.error(`Error bridging from Sepolia to Ten Testnet for ${wallet.address}: ${error.message}`);
-        throw error;
+        logger.error(`Error bridging ETH from Sepolia: ${error.message}`);
     }
 }
 
-// --- FUNGSI BRIDGE ETH TEN TESTNET KE SEPOLIA (PILIHAN 7) ---
-async function handleBridgeTenToSepolia(wallet, provider, ethAmount) {
-    logger.loading(`Starting Bridge Ten Testnet to Sepolia for ${wallet.address} with ${ethAmount} ETH...`);
-    try {
-        const valueToSend = ethers.parseEther(ethAmount);
-        const ethBalance = await checkETHBalance(wallet, provider); // Ini akan check di Ten Testnet
 
-        if (ethBalance < valueToSend + ethers.parseEther('0.01')) { // Margin untuk gas
-            logger.error(`Insufficient ETH balance for Bridge (on Ten Testnet). Required: at least ${ethers.formatEther(valueToSend + ethers.parseEther('0.01'))} ETH`);
+async function bridgeEthToSepolia(wallet, tenRpcUrl, sepoliaWalletAddress, amountToBridgeETH) {
+    logger.step(`Initiating Bridge from Ten Testnet to Sepolia for ${wallet.address}...`);
+    let tenProvider;
+    try {
+        tenProvider = new ethers.JsonRpcProvider(tenRpcUrl);
+        const tenWallet = new ethers.Wallet(wallet.privateKey, tenProvider);
+
+        const amountToBridgeWei = parseEther(amountToBridgeETH); 
+
+        if (isNaN(parseFloat(amountToBridgeETH)) || parseFloat(amountToBridgeETH) <= 0) {
+            logger.error('Invalid bridge amount provided. Please check the initial input.');
             return;
         }
 
-        // Interaksi dengan kontrak bridge di Ten Testnet
-        const bridgeContract = new ethers.Contract(BRIDGE_TEN_TO_SEPOLIA_CONTRACT, bridgeABI, wallet);
+        logger.info(`Attempting to bridge ${amountToBridgeETH} ETH from Ten Testnet to Sepolia...`);
 
-        logger.step(`Initiating bridge from Ten Testnet to Sepolia...`);
-        const tx = await bridgeContract.depositETH({ // Contoh fungsi deposit, ganti sesuai ABI
-            value: valueToSend,
-            gasLimit: 200000, // Sesuaikan
-            gasPrice: ethers.parseUnits('120', 'gwei'), // Sesuaikan untuk Ten Testnet
+        const tenEthBalance = await checkETHBalance(tenWallet, tenProvider, 'TenETH');
+        if (tenEthBalance < amountToBridgeWei + parseEther('0.005')) { 
+            logger.error(`Insufficient TenETH balance. Required: at least ${formatEther(amountToBridgeWei + parseEther('0.005'))} TenETH. Skipping this account.`); 
+            return;
+        }
+
+        const nonce = await tenProvider.getTransactionCount(tenWallet.address, 'latest');
+
+        const data = BRIDGE_DEPOSIT_FUNCTION_SELECTOR + sepoliaWalletAddress.substring(2).padStart(64, '0');
+
+        const txData = {
+            to: TEN_BRIDGE_CONTRACT, 
+            data: data,
+            value: amountToBridgeWei,
+            chainId: TEN_CHAIN_ID, 
+            nonce: nonce,
+            gasLimit: 300000, 
+            gasPrice: parseUnits('20', 'gwei') 
+        };
+
+        logger.info('Sending bridge transaction from Ten Testnet with data:', {
+            to: txData.to,
+            data: txData.data,
+            value: formatEther(txData.value), 
+            chainId: txData.chainId,
+            nonce: txData.nonce,
+            gasLimit: txData.gasLimit.toString(),
+            gasPrice: txData.gasPrice.toString()
         });
 
-        logger.info(`Bridge TX Hash: ${tx.hash}`);
+        const tx = await tenWallet.sendTransaction(txData);
+        logger.info(`Bridge TX Hash (Ten): ${tx.hash}`);
+        logger.loading('Waiting for bridge transaction to be confirmed on Ten Testnet...');
         const receipt = await tx.wait();
 
         if (receipt.status === 0) {
-            throw new Error('Bridge transaction reverted');
+            throw new Error('Bridge transaction reverted on Ten Testnet.');
         }
-        logger.success(`Bridge Ten Testnet to Sepolia TX confirmed in block ${receipt.blockNumber}`);
+
+        logger.success(`Bridge TX confirmed on Ten Testnet in block ${receipt.blockNumber}!`);
+        logger.success('ETH should now be processing to appear on Sepolia.');
+        logger.warn('Please note: Bridging back to Sepolia can also take several minutes to hours, depending on network congestion and bridge finality.');
 
     } catch (error) {
-        logger.error(`Error bridging from Ten Testnet to Sepolia for ${wallet.address}: ${error.message}`);
-        throw error;
+        logger.error(`Error bridging ETH from Ten Testnet: ${error.message}`);
     }
 }
 
@@ -511,19 +520,25 @@ async function main() {
     logger.banner();
 
     const accounts = [];
+    const DEFAULT_SEPOLIA_RPC = 'https://ethereum-sepolia-rpc.publicnode.com'; 
+
     for (let i = 1; ; i++) {
         const privateKey = process.env[`PRIVATE_KEY_${i}`];
-        const rpcUrl = process.env[`RPC_URL_${i}`];
-        const sepoliaRpcUrl = process.env[`SEPOLIA_RPC_URL_${i}`]; // Anda mungkin butuh ini jika bridge antar chain
+        const rpcUrlTen = process.env[`RPC_URL_${i}`];
+        const rpcUrlSepolia = process.env[`RPC_URL_SEPOLIA_${i}`] || process.env.RPC_URL_SEPOLIA || DEFAULT_SEPOLIA_RPC; 
 
-        if (!privateKey && !rpcUrl) {
+        // Kondisi break yang diperbaiki: Berhenti jika tidak ada privateKey DAN tidak ada rpcUrlTen untuk indeks ini.
+        if (!privateKey && !rpcUrlTen) { 
             break;
         }
-        if (!privateKey || !rpcUrl) {
-            logger.error(`Mismatched configuration for account ${i}. Missing PRIVATE_KEY_${i} or RPC_URL_${i}.`);
+
+        // Kondisi error: Jika salah satu ada tapi yang lain tidak (mismatched pair)
+        if (!privateKey || !rpcUrlTen) {
+            logger.error(`Mismatched configuration for account ${i}. Missing PRIVATE_KEY_${i} or RPC_URL_${i} (for Ten Testnet).`);
             process.exit(1);
         }
-        accounts.push({ privateKey, rpcUrl, sepoliaRpcUrl }); // Simpan juga sepoliaRpcUrl
+
+        accounts.push({ privateKey, rpcUrlTen, rpcUrlSepolia });
     }
 
     if (accounts.length === 0) {
@@ -532,105 +547,102 @@ async function main() {
     }
 
     while (true) {
+        gameMessageLogs.length = 0; 
+
         const globalChoice = getMenuSelection();
 
-        if (globalChoice === 8) { // Exit adalah pilihan 8
+        if (globalChoice === 8) { 
             logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
             break;
         }
 
-        let betAmountETH = null;      // Untuk HouseOfTen (input ZEN, tapi di prompt disebut ETH)
-        let zenAmountToPlay = null;   // Untuk Tenzen Game (input ZEN)
-        let ethBridgeAmount = null;   // Untuk Bridge (input ETH)
+        let betAmountETH = null;
+        let bridgeAmountETH = null; // Variabel baru untuk jumlah bridge
         let selectedAI = null;
-        let rounds = 1; // Default to 1 round
+        let rounds = 1;
 
-        // --- Logika input jumlah berdasarkan pilihan menu ---
-        if (globalChoice === 1) { // HouseOfTen Game (Bet ZEN)
+        if (globalChoice === 1) { // HouseOfTen Game
             selectedAI = getAISelection();
             logger.info(`Selected AI for all accounts: ${selectedAI.name} (${selectedAI.address})`);
-            betAmountETH = prompt('Enter bet amount in ZEN (e.g., 0.01): '); // Prompt untuk ZEN
+            betAmountETH = prompt('Enter bet amount in ETH (e.g., 0.01) for all accounts: ');
             if (isNaN(parseFloat(betAmountETH)) || parseFloat(betAmountETH) <= 0) {
                 logger.error('Invalid bet amount. Returning to main menu.');
                 console.log('\n');
                 continue;
             }
-        } else if (globalChoice === 2) { // Tenzen Game (Play with ZEN)
-            zenAmountToPlay = prompt('Enter the amount of ZEN to play (e.g., 0.001): ');
-            if (isNaN(parseFloat(zenAmountToPlay)) || parseFloat(zenAmountToPlay) <= 0) {
-                logger.error('Invalid ZEN amount. Please enter a positive number.');
+            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
+            if (!isNaN(roundsInput) && roundsInput > 0) {
+                rounds = roundsInput;
+            } else {
+                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
+            }
+        } else if (globalChoice === 2 || globalChoice === 3) { // Tenzen atau Battleships
+            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
+            if (!isNaN(roundsInput) && roundsInput > 0) {
+                rounds = roundsInput;
+            } else {
+                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
+            }
+        } else if (globalChoice === 6 || globalChoice === 7) { // Bridge Sepolia->Ten atau Ten->Sepolia
+            bridgeAmountETH = prompt('Enter amount of ETH to bridge for all accounts (e.g., 0.0001): '); 
+            if (isNaN(parseFloat(bridgeAmountETH)) || parseFloat(bridgeAmountETH) <= 0) {
+                logger.error('Invalid bridge amount. Returning to main menu.');
                 console.log('\n');
                 continue;
             }
-        } else if (globalChoice === 6 || globalChoice === 7) { // Bridge Operations (Use ETH)
-            ethBridgeAmount = prompt('Enter the amount of ETH to bridge (e.g., 0.05): ');
-            if (isNaN(parseFloat(ethBridgeAmount)) || parseFloat(ethBridgeAmount) <= 0) {
-                logger.error('Invalid ETH amount. Please enter a positive number.');
-                console.log('\n');
-                continue;
+            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
+            if (!isNaN(roundsInput) && roundsInput > 0) {
+                rounds = roundsInput;
+            } else {
+                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
             }
         }
-        // Pilihan 3 (Battleships) tidak memiliki prompt jumlah spesifik di sini.
-        // Pilihan 4 dan 5 adalah "Coming Soon"
-
-        // Prompt rounds setelah semua input spesifik game/bridge
-        const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
-        if (!isNaN(roundsInput) && roundsInput > 0) {
-            rounds = roundsInput;
-        } else {
-            logger.warn('Invalid number of rounds. Defaulting to 1 round.');
-        }
-        // --- Akhir logika input jumlah dan rounds ---
-
-
-        for (let r = 0; r < rounds; r++) { // Loop untuk putaran
+        
+        for (let r = 0; r < rounds; r++) {
             console.log(`\n${colors.bold}--- Starting Round ${r + 1}/${rounds} ---${colors.reset}`);
             for (const [index, account] of accounts.entries()) {
                 console.log(`\n${colors.bold}--- Processing Account ${index + 1}/${accounts.length} (Round ${r + 1}) ---${colors.reset}`);
                 try {
-                    const currentProvider = new ethers.JsonRpcProvider(account.rpcUrl);
-                    const currentWallet = new ethers.Wallet(account.privateKey, currentProvider);
+                    const currentProviderTen = new ethers.JsonRpcProvider(account.rpcUrlTen);
+                    const currentWalletTen = new ethers.Wallet(account.privateKey, currentProviderTen);
+                    
+                    const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWalletTen);
+                    const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWalletTen);
 
-                    const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWallet);
-                    const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWallet);
-
-                    logger.wallet(`Wallet Address: ${currentWallet.address}`);
-                    logger.info(`Using RPC: ${account.rpcUrl}`);
+                    logger.wallet(`Wallet Address: ${currentWalletTen.address}`);
+                    logger.info(`Using Ten RPC: ${account.rpcUrlTen}`);
+                    logger.info(`Using Sepolia RPC: ${account.rpcUrlSepolia}`);
 
                     if (globalChoice === 1) {
-                        await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
+                        await houseOfTenGameAutomated(currentWalletTen, currentProviderTen, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
                     } else if (globalChoice === 2) {
-                        await playTenzenGame(currentWallet, currentProvider, zenAmountToPlay); // Kirim jumlah ZEN
+                        await playTenzenGame(currentWalletTen, currentProviderTen);
                     } else if (globalChoice === 3) {
-                        await battleshipsGame(currentWallet, currentProvider); // Battleships tidak memerlukan input jumlah spesifik
-                    } else if (globalChoice === 6) {
-                        // Untuk bridge Sepolia to Ten, wallet harus terkoneksi ke Sepolia.
-                        // Anda perlu menyesuaikan ini untuk bot multi-chain yang sebenarnya.
-                        // Jika 'sepoliaRpcUrl' tersedia di akun:
-                        // const sepoliaProvider = new ethers.JsonRpcProvider(account.sepoliaRpcUrl);
-                        // const sepoliaWallet = new ethers.Wallet(account.privateKey, sepoliaProvider);
-                        // await handleBridgeSepoliaToTen(sepoliaWallet, sepoliaProvider, ethBridgeAmount);
-                        // Untuk demo saat ini, kita pakai wallet Ten, jadi ini akan gagal jika kontrak di Sepolia.
-                        logger.warn("Bridge Sepolia to Ten requires wallet to be on Sepolia. Proceeding with current wallet, but it might fail.");
-                        await handleBridgeSepoliaToTen(currentWallet, currentProvider, ethBridgeAmount);
-                    } else if (globalChoice === 7) {
-                        await handleBridgeTenToSepolia(currentWallet, currentProvider, ethBridgeAmount);
+                        await battleshipsGame(currentWalletTen, currentProviderTen);
+                    } else if (globalChoice === 6) { // Bridge Sepolia -> Ten
+                        await bridgeEthToTen(currentWalletTen, account.rpcUrlSepolia, currentWalletTen.address, bridgeAmountETH); 
+                    } else if (globalChoice === 7) { // Bridge Ten -> Sepolia
+                        await bridgeEthToSepolia(currentWalletTen, account.rpcUrlTen, currentWalletTen.address, bridgeAmountETH); 
                     }
 
                 } catch (error) {
-                    logger.error(`Error processing account ${index + 1} (${account.rpcUrl}) in Round ${r + 1}: ${error.message}`);
+                    logger.error(`Error processing account ${index + 1} (${account.rpcUrlTen}) in Round ${r + 1}: ${error.message}`);
                 }
                 if (index < accounts.length - 1) {
                     logger.info('Waiting 10 seconds before processing next account...');
                     await new Promise(resolve => setTimeout(resolve, 10000));
                 }
             }
-            if (r < rounds - 1) { // Hanya jeda jika bukan putaran terakhir
+            if (r < rounds - 1) { 
                 logger.info(`Waiting 3 seconds before next round...`);
-                await new Promise(resolve => setTimeout(resolve, 3000)); // Jeda antar putaran
+                await new Promise(resolve => setTimeout(resolve, 3000));
             }
         }
         logger.success('All rounds processed for the selected action.');
+        
+        if (globalChoice === 3) {
+            logger.displayGameLogs();
+        }
         console.log('\n');
     }
 
