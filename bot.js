@@ -6,7 +6,7 @@ const prompt = require('prompt-sync')({ sigint: true });
 const CHAIN_ID = 443;
 // Perhatian: ZEN_CONTRACT di sini adalah 0xDa701a7231096209C4F5AC83F44F22eFA75f4519, yang sama dengan TENZEN_CONTRACT.
 // Pastikan ini adalah alamat yang benar untuk ZEN token di jaringan Anda.
-const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae'; 
+const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae';
 const BETTING_CONTRACT = '0xc288b41e88cc04dfec6e81df8b705791e94a0b64';
 const BATTLESHIPS_CONTRACT = '0xD64206151CEAE054962E2eD7aC16aad5e39c3Ef3';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
@@ -18,7 +18,8 @@ const BATTLESHIPS_VALUE_AMOUNT = '0xfbd0fc05ae000'; // Value Battleships dalam h
 // Konstanta TENZEN
 const TENZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
 const TENZEN_FUNCTION_SELECTOR = '0x93e84cd9';
-const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000';
+// TENZEN_VALUE_AMOUNT akan diganti dengan input pengguna untuk pilihan 2
+// const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000'; // Ini tidak lagi digunakan jika input pengguna dipakai
 const TENZEN_GAS_PRICE = ethers.parseUnits('120', 'gwei');
 const TENZEN_GAS_LIMIT = 128453;
 
@@ -71,20 +72,24 @@ function generateRandomCoordinates() {
     };
 }
 
+// --- Menu Utama yang telah disesuaikan ---
 function displayMainMenu() {
     logger.step('Main Menu:');
     console.log(`${colors.cyan}1. HouseOfTen Game${colors.reset}`);
-    console.log(`${colors.cyan}2. Tenzen Game${colors.reset}`);
+    console.log(`${colors.cyan}2. Tenzen Game${colors.reset}`); // Akan ada prompt jumlah
     console.log(`${colors.cyan}3. Battleships Game${colors.reset}`);
-    console.log(`${colors.cyan}4. Dexynth Perpetual${colors.reset}`);
-    console.log(`${colors.cyan}5. Chimp Dex${colors.reset}`);
-    console.log(`${colors.cyan}6. Exit${colors.reset}`);
+    console.log(`${colors.cyan}4. Dexynth Perpetual (Coming Soon)${colors.reset}`);
+    console.log(`${colors.cyan}5. Chimp Dex (Coming Soon)${colors.reset}`);
+    console.log(`${colors.cyan}6. Bridge/New Game Option 1 (Example)${colors.reset}`); // Akan ada prompt jumlah
+    console.log(`${colors.cyan}7. Bridge/New Game Option 2 (Example)${colors.reset}`); // Akan ada prompt jumlah
+    console.log(`${colors.cyan}8. Exit${colors.reset}`);
 }
 
 function getMenuSelection() {
     displayMainMenu();
     const choice = parseInt(prompt('Enter the number of your choice: '));
-    if (isNaN(choice) || choice < 1 || choice > 6) {
+    // Perbarui batas atas untuk pilihan valid menjadi 8
+    if (isNaN(choice) || choice < 1 || choice > 8) {
         logger.error('Invalid selection. Please choose a valid number.');
         return getMenuSelection();
     }
@@ -225,7 +230,7 @@ async function playBattleships(wallet, provider, x, y) {
             gasPrice: ethers.parseUnits('130', 'gwei'),
             chainId: CHAIN_ID,
             nonce: nonce,
-            value: BATTLESHIPS_VALUE_AMOUNT // Menggunakan nilai heksadesimal langsung
+            value: BATTLESHIPS_VALUE_AMOUNT // Menggunakan nilai heksadesimal langsung dari konstanta
         };
 
         logger.info('Sending transaction with data:', {
@@ -254,12 +259,14 @@ async function playBattleships(wallet, provider, x, y) {
     }
 }
 
-async function playTenzenGame(wallet, provider) {
-    logger.loading(`Starting Tenzen Game for ${wallet.address}...`);
+// --- Fungsi Tenzen Game yang menerima input jumlah ETH ---
+async function playTenzenGame(wallet, provider, amountToPayETH) {
+    logger.loading(`Starting Tenzen Game for ${wallet.address} with value ${amountToPayETH} ETH...`);
     try {
+        const requiredValueBigInt = ethers.parseEther(amountToPayETH); // Parse input pengguna
+
         const ethBalance = await checkETHBalance(wallet, provider);
-        const requiredValueBigInt = ethers.toBigInt(TENZEN_VALUE_AMOUNT); 
-        
+
         if (ethBalance < requiredValueBigInt + ethers.parseEther('0.005')) {
             logger.error(`Insufficient ETH balance for Tenzen. Required: at least ${ethers.formatEther(requiredValueBigInt + ethers.parseEther('0.005'))} ETH`);
             return;
@@ -274,7 +281,7 @@ async function playTenzenGame(wallet, provider) {
             gasPrice: TENZEN_GAS_PRICE,
             chainId: CHAIN_ID,
             nonce: nonce,
-            value: TENZEN_VALUE_AMOUNT
+            value: requiredValueBigInt // Gunakan jumlah yang diinput pengguna di sini
         };
 
         logger.info('Sending Tenzen transaction with data:', {
@@ -375,6 +382,93 @@ async function battleshipsGame(wallet, provider) {
     }
 }
 
+// --- Fungsi placeholder untuk Bridge/Game Baru Opsi 1 (Pilihan 6) ---
+async function handleBridgeOrNewGame1(wallet, provider, amountToPayETH) {
+    logger.loading(`Starting Bridge/New Game Option 1 for ${wallet.address} with value ${amountToPayETH} ETH...`);
+    try {
+        const valueToSend = ethers.parseEther(amountToPayETH);
+        const ethBalance = await checkETHBalance(wallet, provider);
+
+        if (ethBalance < valueToSend + ethers.parseEther('0.005')) { // Tambah margin untuk gas
+            logger.error(`Insufficient ETH balance for Bridge/New Game Option 1. Required: at least ${ethers.formatEther(valueToSend + ethers.parseEther('0.005'))} ETH`);
+            return;
+        }
+
+        // --- GANTI INI DENGAN LOGIKA BRIDGE/GAME SEBENARNYA ---
+        // Contoh: Mengirim ETH ke alamat kontrak bridge/game.
+        const targetContractAddress = '0xYourBridgeOrGameContractAddress1'; // Ganti dengan alamat kontrak yang benar
+
+        const nonce = await provider.getTransactionCount(wallet.address, 'latest');
+
+        const txData = {
+            to: targetContractAddress,
+            value: valueToSend, // Jumlah yang diinput pengguna
+            gasLimit: 150000, // Sesuaikan gas limit sesuai kebutuhan kontrak
+            gasPrice: ethers.parseUnits('120', 'gwei'),
+            chainId: CHAIN_ID,
+            nonce: nonce,
+        };
+
+        logger.info('Sending transaction for Bridge/New Game Option 1:', txData);
+        const tx = await wallet.sendTransaction(txData);
+        logger.info(`Bridge/New Game TX Hash: ${tx.hash}`);
+        const receipt = await tx.wait();
+
+        if (receipt.status === 0) {
+            throw new Error('Transaction reverted');
+        }
+        logger.success(`Bridge/New Game Option 1 TX confirmed in block ${receipt.blockNumber}`);
+        // --- AKHIR LOGIKA BRIDGE/GAME ---
+
+    } catch (error) {
+        logger.error(`Error in Bridge/New Game Option 1 for ${wallet.address}: ${error.message}`);
+        throw error;
+    }
+}
+
+// --- Fungsi placeholder untuk Bridge/Game Baru Opsi 2 (Pilihan 7) ---
+async function handleBridgeOrNewGame2(wallet, provider, amountToPayETH) {
+    logger.loading(`Starting Bridge/New Game Option 2 for ${wallet.address} with value ${amountToPayETH} ETH...`);
+    try {
+        const valueToSend = ethers.parseEther(amountToPayETH);
+        const ethBalance = await checkETHBalance(wallet, provider);
+
+        if (ethBalance < valueToSend + ethers.parseEther('0.005')) { // Tambah margin untuk gas
+            logger.error(`Insufficient ETH balance for Bridge/New Game Option 2. Required: at least ${ethers.formatEther(valueToSend + ethers.parseEther('0.005'))} ETH`);
+            return;
+        }
+
+        // --- GANTI INI DENGAN LOGIKA BRIDGE/GAME SEBENARNYA ---
+        const targetContractAddress = '0xYourBridgeOrGameContractAddress2'; // Ganti dengan alamat kontrak yang benar
+
+        const nonce = await provider.getTransactionCount(wallet.address, 'latest');
+
+        const txData = {
+            to: targetContractAddress,
+            value: valueToSend, // Jumlah yang diinput pengguna
+            gasLimit: 150000, // Sesuaikan gas limit sesuai kebutuhan kontrak
+            gasPrice: ethers.parseUnits('120', 'gwei'),
+            chainId: CHAIN_ID,
+            nonce: nonce,
+        };
+
+        logger.info('Sending transaction for Bridge/New Game Option 2:', txData);
+        const tx = await wallet.sendTransaction(txData);
+        logger.info(`Bridge/New Game TX Hash: ${tx.hash}`);
+        const receipt = await tx.wait();
+
+        if (receipt.status === 0) {
+            throw new Error('Transaction reverted');
+        }
+        logger.success(`Bridge/New Game Option 2 TX confirmed in block ${receipt.blockNumber}`);
+        // --- AKHIR LOGIKA BRIDGE/GAME ---
+
+    } catch (error) {
+        logger.error(`Error in Bridge/New Game Option 2 for ${wallet.address}: ${error.message}`);
+        throw error;
+    }
+}
+
 
 async function main() {
     logger.banner();
@@ -402,16 +496,18 @@ async function main() {
     while (true) {
         const globalChoice = getMenuSelection();
 
-        if (globalChoice === 6) {
+        if (globalChoice === 8) { // Exit adalah pilihan 8
             logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
             break;
         }
 
-        let betAmountETH = null;
+        let betAmountETH = null; // Untuk HouseOfTen
+        let amountToPay = null;  // Untuk Tenzen, Bridge/Game baru
         let selectedAI = null;
         let rounds = 1; // Default to 1 round
 
-        if (globalChoice === 1) {
+        // --- Logika input jumlah berdasarkan pilihan menu ---
+        if (globalChoice === 1) { // HouseOfTen Game
             selectedAI = getAISelection();
             logger.info(`Selected AI for all accounts: ${selectedAI.name} (${selectedAI.address})`);
             betAmountETH = prompt('Enter bet amount in ETH (e.g., 0.01) for all accounts: ');
@@ -426,7 +522,20 @@ async function main() {
             } else {
                 logger.warn('Invalid number of rounds. Defaulting to 1 round.');
             }
-        } else if (globalChoice === 2 || globalChoice === 3) { // Untuk Tenzen atau Battleships
+        } else if (globalChoice === 2 || globalChoice === 6 || globalChoice === 7) { // Tenzen, Bridge/Game Baru
+            amountToPay = prompt('Enter the amount of ETH to pay (e.g., 0.001): ');
+            if (isNaN(parseFloat(amountToPay)) || parseFloat(amountToPay) <= 0) {
+                logger.error('Invalid amount. Please enter a positive number.');
+                console.log('\n');
+                continue;
+            }
+            const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
+            if (!isNaN(roundsInput) && roundsInput > 0) {
+                rounds = roundsInput;
+            } else {
+                logger.warn('Invalid number of rounds. Defaulting to 1 round.');
+            }
+        } else if (globalChoice === 3) { // Battleships Game (Tidak ada prompt jumlah spesifik)
             const roundsInput = parseInt(prompt('Enter number of rounds to play: '));
             if (!isNaN(roundsInput) && roundsInput > 0) {
                 rounds = roundsInput;
@@ -434,6 +543,7 @@ async function main() {
                 logger.warn('Invalid number of rounds. Defaulting to 1 round.');
             }
         }
+        // --- Akhir logika input jumlah ---
 
 
         for (let r = 0; r < rounds; r++) { // Loop untuk putaran
@@ -456,9 +566,13 @@ async function main() {
                     if (globalChoice === 1) {
                         await houseOfTenGameAutomated(currentWallet, currentProvider, currentZenContract, currentBettingContract, selectedAI, betAmountETH);
                     } else if (globalChoice === 2) {
-                        await playTenzenGame(currentWallet, currentProvider);
+                        await playTenzenGame(currentWallet, currentProvider, amountToPay); // Kirim amountToPay
                     } else if (globalChoice === 3) {
-                        await battleshipsGame(currentWallet, currentProvider);
+                        await battleshipsGame(currentWallet, currentProvider); // Battleships tidak memerlukan input jumlah spesifik
+                    } else if (globalChoice === 6) {
+                        await handleBridgeOrNewGame1(currentWallet, currentProvider, amountToPay); // Kirim amountToPay
+                    } else if (globalChoice === 7) {
+                        await handleBridgeOrNewGame2(currentWallet, currentProvider, amountToPay); // Kirim amountToPay
                     }
 
                 } catch (error) {
