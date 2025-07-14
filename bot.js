@@ -661,7 +661,7 @@ async function main() {
                 }
                 if (index < accounts.length - 1) {
                     logger.info('Waiting 10 seconds before processing next account...');
-                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    await new Promise(resolve => setTimeout(resolve, 5000));
                 }
             }
             if (r < rounds - 1) { 
