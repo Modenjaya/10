@@ -660,8 +660,8 @@ async function main() {
                     logger.error(`Error processing account ${index + 1} (${account.rpcUrlTen}) in Round ${r + 1}: ${error.message}`);
                 }
                 if (index < accounts.length - 1) {
-                    logger.info('Waiting 5 seconds before processing next account...');
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    logger.info('Waiting 10 seconds before processing next account...');
+                    await new Promise(resolve => setTimeout(resolve, 10000));
                 }
             }
             if (r < rounds - 1) { 
