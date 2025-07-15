@@ -7,24 +7,24 @@ const prompt = require('prompt-sync')({ sigint: true });
 
 
 const SEPOLIA_CHAIN_ID = 11155111;
-const TEN_CHAIN_ID = 443;
+const TEN_CHAIN_ID = 443; 
 
 const SEPOLIA_BRIDGE_CONTRACT = '0x007522bfE81C3a2ff8D885b65eEc2C9b68E30348';
 const TEN_BRIDGE_CONTRACT = '0x796EFCB0941Cf84aa7079e124dB8b5D3082A76Fb';
 const BRIDGE_DEPOSIT_FUNCTION_SELECTOR = '0x1888d712';
 
 
-const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae';
-const BETTING_CONTRACT = '0x3a1b88a2ba0a0cd05c7cf8c6e9dd76520ff17354';
+const ZEN_CONTRACT = '0xa02e395b0d05a33f96c0d4e74c76c1a2ee7ef3ae'; 
+const BETTING_CONTRACT = '0x5C617dc01Ee16a201bD878Ce8Db4E69e95634caE';
 const BATTLESHIPS_CONTRACT = '0xD64206151CEAE054962E2eD7aC16aad5e39c3Ef3';
 const HOUSE_API_URL = 'https://houseof.ten.xyz/api/player-actions';
 
-const BATTLESHIPS_VALUE_AMOUNT = '0xfbd0fc05ae000';
+const BATTLESHIPS_VALUE_AMOUNT = '0xfbd0fc05ae000'; 
 
 const TENZEN_CONTRACT = '0xDa701a7231096209C4F5AC83F44F22eFA75f4519';
 const TENZEN_FUNCTION_SELECTOR = '0x93e84cd9';
 const TENZEN_VALUE_AMOUNT = '0xfbd0fc05ae000';
-const TENZEN_GAS_PRICE = parseUnits('120', 'gwei');
+const TENZEN_GAS_PRICE = parseUnits('120', 'gwei'); 
 const TENZEN_GAS_LIMIT = 128453;
 
 const AI_OPTIONS = [
@@ -83,10 +83,7 @@ const zenABI = [
     'function balanceOf(address account) public view returns (uint256)',
 ];
 
-const bettingABI = [
-    'function placeBet(uint256 betType, address aiAddress, uint256 amount) public',
-    'function claimBettingRewards(uint256 roundId) public' // Added claim function
-];
+const bettingABI = ['function placeBet(uint256 betType, address aiAddress, uint256 amount) public'];
 
 function generateRandomCoordinates() {
     return {
@@ -100,26 +97,25 @@ function displayMainMenu() {
     console.log(`${colors.cyan}1. HouseOfTen Game${colors.reset}`);
     console.log(`${colors.cyan}2. Tenzen Game${colors.reset}`);
     console.log(`${colors.cyan}3. Battleships Game${colors.reset}`);
-    console.log(`${colors.cyan}4. Claim Betting Rewards${colors.reset}`); // New option
-    console.log(`${colors.cyan}5. Dexynth Perpetual${colors.reset}`);
-    console.log(`${colors.cyan}6. Chimp Dex${colors.reset}`);
-    console.log(`${colors.cyan}7. Bridge Sepolia to Ten Testnet (ETH)${colors.reset}`);
-    console.log(`${colors.cyan}8. Bridge Ten Testnet to Sepolia (ETH)${colors.reset}`);
-    console.log(`${colors.cyan}9. Exit${colors.reset}`);
+    console.log(`${colors.cyan}4. Dexynth Perpetual${colors.reset}`);
+    console.log(`${colors.cyan}5. Chimp Dex${colors.reset}`);
+    console.log(`${colors.cyan}6. Bridge Sepolia to Ten Testnet (ETH)${colors.reset}`);
+    console.log(`${colors.cyan}7. Bridge Ten Testnet to Sepolia (ETH)${colors.reset}`); 
+    console.log(`${colors.cyan}8. Exit${colors.reset}`); 
 }
 
 function getMenuSelection() {
     displayMainMenu();
     const choice = parseInt(prompt('Enter the number of your choice: '));
-    if (isNaN(choice) || choice < 1 || choice > 9) {
+    if (isNaN(choice) || choice < 1 || choice > 8) { 
         logger.error('Invalid selection. Please choose a valid number.');
         return getMenuSelection();
     }
-    if (choice === 5) {
+    if (choice === 4) {
         logger.error('Dexynth Perpetual is Coming Soon. Please choose another option.');
         return getMenuSelection();
     }
-    if (choice === 6) {
+    if (choice === 5) {
         logger.error('Chimp Dex is Coming Soon. Please choose another option.');
         return getMenuSelection();
     }
@@ -147,8 +143,8 @@ async function checkZENBalance(wallet, zenContract) {
     logger.loading(`Checking ZEN balance for ${wallet.address}...`);
     try {
         const balance = await zenContract.balanceOf(wallet.address);
-        const balanceFormatted = formatEther(balance);
-        logger.info(`ZEN Balance: ${balanceFormatted} ZEN`);
+        const balanceFormatted = formatEther(balance); 
+        logger.info(`ZEN Balance: ${balanceFormatted} ZEN`); // Changed to ZEN
         return balance;
     } catch (error) {
         logger.error(`Error checking ZEN balance for ${wallet.address}: ${error.message}`);
@@ -160,7 +156,7 @@ async function checkETHBalance(wallet, provider, chainName = 'ETH') {
     logger.loading(`Checking ${chainName} balance for ${wallet.address}...`);
     try {
         const balance = await provider.getBalance(wallet.address);
-        const balanceFormatted = formatEther(balance);
+        const balanceFormatted = formatEther(balance); 
         logger.info(`${chainName} Balance: ${balanceFormatted} ETH`);
         return balance;
     } catch (error) {
@@ -170,7 +166,7 @@ async function checkETHBalance(wallet, provider, chainName = 'ETH') {
 }
 
 async function approveZEN(wallet, zenContract, spender, amount) {
-    logger.loading(`Approving ${formatEther(amount)} ZEN for ${spender} from ${wallet.address}...`);
+    logger.loading(`Approving ${formatEther(amount)} ZEN for ${spender} from ${wallet.address}...`); 
     try {
         const tx = await zenContract.connect(wallet).approve(spender, amount);
         logger.info(`Approve TX Hash: ${tx.hash}`);
@@ -184,7 +180,7 @@ async function approveZEN(wallet, zenContract, spender, amount) {
 }
 
 async function placeBet(wallet, bettingContract, betType, aiAddress, amount) {
-    logger.loading(`Placing bet of ${formatEther(amount)} ZEN from ${wallet.address}...`);
+    logger.loading(`Placing bet of ${formatEther(amount)} ZEN from ${wallet.address}...`); 
     try {
         const tx = await bettingContract.connect(wallet).placeBet(betType, aiAddress, amount, {
             gasLimit: 300000,
@@ -231,7 +227,7 @@ async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingCon
     logger.loading(`Starting HouseOfTen Game for ${wallet.address} against ${selectedAI.name}...`);
     try {
         // Parse the bet amount string into BigInt for ZEN (which has 18 decimals, like ETH)
-        const betAmountWei = parseEther(betAmountZEN_String);
+        const betAmountWei = parseEther(betAmountZEN_String); 
 
         // 1. Check ZEN balance
         const zenBalance = await checkZENBalance(wallet, zenContract);
@@ -245,7 +241,7 @@ async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingCon
         await approveZEN(wallet, zenContract, BETTING_CONTRACT, betAmountWei);
 
         // 3. Place the bet
-        // Assuming betType 1 for simplicity, adjust if different bet types are needed based on game logic
+        // Assuming betType 0 for simplicity, adjust if different bet types are needed based on game logic
         logger.step(`Placing bet of ${betAmountZEN_String} ZEN against ${selectedAI.name}...`);
         await placeBet(wallet, bettingContract, 1, selectedAI.address, betAmountWei);
 
@@ -256,36 +252,10 @@ async function houseOfTenGameAutomated(wallet, provider, zenContract, bettingCon
         logger.success('HouseOfTen game played successfully!');
     } catch (error) {
         logger.error(`HouseOfTen Game failed for ${wallet.address}: ${error.message}`);
-        throw error;
+        throw error; 
     }
 }
 // --- END NEW FUNCTION ---
-
-// --- NEW FUNCTION FOR CLAIMING BETTING REWARDS ---
-async function claimBettingRewards(wallet, bettingContract, roundId) {
-    logger.loading(`Attempting to claim betting rewards for round ${roundId} for ${wallet.address}...`);
-    try {
-        const tx = await bettingContract.connect(wallet).claimBettingRewards(roundId, {
-            gasLimit: 160000, // Based on your provided gas "0x268a3" (157859 in decimal)
-            gasPrice: parseUnits('20', 'gwei'), // Using a reasonable gas price for Ten Testnet
-        });
-        logger.info(`Claim Rewards TX Hash: ${tx.hash}`);
-        const receipt = await tx.wait();
-
-        if (receipt.status === 0) {
-            throw new Error('Claim rewards transaction reverted.');
-        }
-
-        logger.success(`Claim Rewards TX confirmed in block ${receipt.blockNumber}`);
-        logger.success(`Successfully claimed rewards for round ${roundId}!`);
-        return receipt;
-    } catch (error) {
-        logger.error(`Error claiming betting rewards for ${wallet.address} (Round ${roundId}): ${error.message}`);
-        throw error;
-    }
-}
-// --- END NEW FUNCTION ---
-
 
 async function playBattleships(wallet, provider, x, y) {
     logger.loading(`Playing Battleships game at coordinates (${x}, ${y}) for ${wallet.address}...`);
@@ -309,9 +279,9 @@ async function playBattleships(wallet, provider, x, y) {
         const txData = {
             to: BATTLESHIPS_CONTRACT,
             data: data,
-            gasLimit: 250000,
-            gasPrice: parseUnits('20', 'gwei'),
-            chainId: TEN_CHAIN_ID,
+            gasLimit: 250000, 
+            gasPrice: parseUnits('20', 'gwei'), 
+            chainId: TEN_CHAIN_ID, 
             nonce: nonce,
             value: BATTLESHIPS_VALUE_AMOUNT
         };
@@ -335,15 +305,15 @@ async function playBattleships(wallet, provider, x, y) {
         }
 
         logger.success(`Play TX confirmed in block ${receipt.blockNumber}`);
-
+        
         logger.gameLog(`TARGET STRIKE TX: ${tx.hash}`);
         logger.gameLog(`STRIKING TARGET at (${x}, ${y})...`);
-        logger.gameLog(`GRAVEYARD INFO UPDATED.`);
+        logger.gameLog(`GRAVEYARD INFO UPDATED.`); 
 
         return receipt;
     } catch (error) {
         logger.error(`Error playing Battleships game at (${x}, ${y}) for ${wallet.address}: ${error.message}`);
-        logger.gameLog(`SHOT FAILED at (${x}, ${y}). Error: ${error.message}`);
+        logger.gameLog(`SHOT FAILED at (${x}, ${y}). Error: ${error.message}`); 
         throw error;
     }
 }
@@ -352,10 +322,10 @@ async function playTenzenGame(wallet, provider) {
     logger.loading(`Starting Tenzen Game for ${wallet.address}...`);
     try {
         const ethBalance = await checkETHBalance(wallet, provider, 'TenETH');
-        const requiredValueBigInt = toBigInt(TENZEN_VALUE_AMOUNT);
-
-        if (ethBalance < requiredValueBigInt + parseEther('0.005')) {
-            logger.error(`Insufficient TenETH balance for Tenzen. Required: at least ${formatEther(requiredValueBigInt + parseEther('0.005'))} TenETH`);
+        const requiredValueBigInt = toBigInt(TENZEN_VALUE_AMOUNT); 
+        
+        if (ethBalance < requiredValueBigInt + parseEther('0.005')) { 
+            logger.error(`Insufficient TenETH balance for Tenzen. Required: at least ${formatEther(requiredValueBigInt + parseEther('0.005'))} TenETH`); 
             return;
         }
 
@@ -397,23 +367,23 @@ async function playTenzenGame(wallet, provider) {
     }
 }
 
-const globalShotCoordinates = new Set();
+const globalShotCoordinates = new Set(); 
 
 async function battleshipsGame(wallet, provider) {
     try {
         logger.step('Starting Battleships Game...');
 
         const ethBalance = await checkETHBalance(wallet, provider, 'TenETH');
-        const requiredValueBigInt = toBigInt(BATTLESHIPS_VALUE_AMOUNT);
-        const gasPrice = parseUnits('20', 'gwei');
-        const gasLimit = 250000;
+        const requiredValueBigInt = toBigInt(BATTLESHIPS_VALUE_AMOUNT); 
+        const gasPrice = parseUnits('20', 'gwei'); 
+        const gasLimit = 250000; 
         const estimatedGasCost = BigInt(gasLimit) * gasPrice;
         const totalCost = requiredValueBigInt + estimatedGasCost;
 
         if (ethBalance < totalCost) {
-            logger.error(`Insufficient TenETH balance for Battleships. Required: ~${formatEther(totalCost)} TenETH, but you only have ${formatEther(ethBalance)} TenETH.`);
+            logger.error(`Insufficient TenETH balance for Battleships. Required: ~${formatEther(totalCost)} TenETH, but you only have ${formatEther(ethBalance)} TenETH.`); 
             logger.error('Please add more testnet ETH to your wallet.');
-            return;
+            return; 
         }
 
         let x, y;
@@ -436,7 +406,7 @@ async function battleshipsGame(wallet, provider) {
 
         try {
             await playBattleships(wallet, provider, x, y);
-            globalShotCoordinates.add(coordKey);
+            globalShotCoordinates.add(coordKey); 
             logger.success('Battleships game played successfully!');
         } catch (error) {
             logger.error(`Battleships Game failed at (${x}, ${y}) for ${wallet.address}: ${error.message}`);
@@ -454,7 +424,7 @@ async function bridgeEthToTen(wallet, sepoliaRpcUrl, tenWalletAddress, amountToB
         sepoliaProvider = new ethers.JsonRpcProvider(sepoliaRpcUrl);
         const sepoliaWallet = new ethers.Wallet(wallet.privateKey, sepoliaProvider);
 
-        const amountToBridgeWei = parseEther(amountToBridgeETH);
+        const amountToBridgeWei = parseEther(amountToBridgeETH); 
 
         if (isNaN(parseFloat(amountToBridgeETH)) || parseFloat(amountToBridgeETH) <= 0) {
             logger.error('Invalid bridge amount provided. Please check the initial input.');
@@ -464,8 +434,8 @@ async function bridgeEthToTen(wallet, sepoliaRpcUrl, tenWalletAddress, amountToB
         logger.info(`Attempting to bridge ${amountToBridgeETH} ETH from Sepolia to Ten Testnet...`);
 
         const sepoliaEthBalance = await checkETHBalance(sepoliaWallet, sepoliaProvider, 'SepoliaETH');
-        if (sepoliaEthBalance < amountToBridgeWei + parseEther('0.0001')) {
-            logger.error(`Insufficient Sepolia ETH balance. Required: at least ${formatEther(amountToBridgeWei + parseEther('0.0001'))} ETH. Skipping this account.`);
+        if (sepoliaEthBalance < amountToBridgeWei + parseEther('0.0001')) { 
+            logger.error(`Insufficient Sepolia ETH balance. Required: at least ${formatEther(amountToBridgeWei + parseEther('0.0001'))} ETH. Skipping this account.`); 
             return;
         }
 
@@ -479,14 +449,14 @@ async function bridgeEthToTen(wallet, sepoliaRpcUrl, tenWalletAddress, amountToB
             value: amountToBridgeWei,
             chainId: SEPOLIA_CHAIN_ID,
             nonce: nonce,
-            gasLimit: 300000,
-            gasPrice: parseUnits('15', 'gwei')
+            gasLimit: 300000, 
+            gasPrice: parseUnits('15', 'gwei') 
         };
 
         logger.info('Sending bridge transaction from Sepolia with data:', {
             to: txData.to,
             data: txData.data,
-            value: formatEther(txData.value),
+            value: formatEther(txData.value), 
             chainId: txData.chainId,
             nonce: txData.nonce,
             gasLimit: txData.gasLimit.toString(),
@@ -519,7 +489,7 @@ async function bridgeEthToSepolia(wallet, tenRpcUrl, sepoliaWalletAddress, amoun
         tenProvider = new ethers.JsonRpcProvider(tenRpcUrl);
         const tenWallet = new ethers.Wallet(wallet.privateKey, tenProvider);
 
-        const amountToBridgeWei = parseEther(amountToBridgeETH);
+        const amountToBridgeWei = parseEther(amountToBridgeETH); 
 
         if (isNaN(parseFloat(amountToBridgeETH)) || parseFloat(amountToBridgeETH) <= 0) {
             logger.error('Invalid bridge amount provided. Please check the initial input.');
@@ -529,8 +499,8 @@ async function bridgeEthToSepolia(wallet, tenRpcUrl, sepoliaWalletAddress, amoun
         logger.info(`Attempting to bridge ${amountToBridgeETH} ETH from Ten Testnet to Sepolia...`);
 
         const tenEthBalance = await checkETHBalance(tenWallet, tenProvider, 'TenETH');
-        if (tenEthBalance < amountToBridgeWei + parseEther('0.005')) {
-            logger.error(`Insufficient TenETH balance. Required: at least ${formatEther(amountToBridgeWei + parseEther('0.005'))} TenETH. Skipping this account.`);
+        if (tenEthBalance < amountToBridgeWei + parseEther('0.005')) { 
+            logger.error(`Insufficient TenETH balance. Required: at least ${formatEther(amountToBridgeWei + parseEther('0.005'))} TenETH. Skipping this account.`); 
             return;
         }
 
@@ -539,19 +509,19 @@ async function bridgeEthToSepolia(wallet, tenRpcUrl, sepoliaWalletAddress, amoun
         const data = BRIDGE_DEPOSIT_FUNCTION_SELECTOR + sepoliaWalletAddress.substring(2).padStart(64, '0');
 
         const txData = {
-            to: TEN_BRIDGE_CONTRACT,
+            to: TEN_BRIDGE_CONTRACT, 
             data: data,
             value: amountToBridgeWei,
-            chainId: TEN_CHAIN_ID,
+            chainId: TEN_CHAIN_ID, 
             nonce: nonce,
-            gasLimit: 300000,
-            gasPrice: parseUnits('20', 'gwei')
+            gasLimit: 300000, 
+            gasPrice: parseUnits('20', 'gwei') 
         };
 
         logger.info('Sending bridge transaction from Ten Testnet with data:', {
             to: txData.to,
             data: txData.data,
-            value: formatEther(txData.value),
+            value: formatEther(txData.value), 
             chainId: txData.chainId,
             nonce: txData.nonce,
             gasLimit: txData.gasLimit.toString(),
@@ -581,17 +551,19 @@ async function main() {
     logger.banner();
 
     const accounts = [];
-    const DEFAULT_SEPOLIA_RPC = 'https://ethereum-sepolia-rpc.publicnode.com';
+    const DEFAULT_SEPOLIA_RPC = 'https://ethereum-sepolia-rpc.publicnode.com'; 
 
     for (let i = 1; ; i++) {
         const privateKey = process.env[`PRIVATE_KEY_${i}`];
         const rpcUrlTen = process.env[`RPC_URL_${i}`];
-        const rpcUrlSepolia = process.env[`RPC_URL_SEPOLIA_${i}`] || process.env.RPC_URL_SEPOLIA || DEFAULT_SEPOLIA_RPC;
+        const rpcUrlSepolia = process.env[`RPC_URL_SEPOLIA_${i}`] || process.env.RPC_URL_SEPOLIA || DEFAULT_SEPOLIA_RPC; 
 
-        if (!privateKey && !rpcUrlTen) {
+        // Kondisi break yang diperbaiki: Berhenti jika tidak ada privateKey DAN tidak ada rpcUrlTen untuk indeks ini.
+        if (!privateKey && !rpcUrlTen) { 
             break;
         }
 
+        // Kondisi error: Jika salah satu ada tapi yang lain tidak (mismatched pair)
         if (!privateKey || !rpcUrlTen) {
             logger.error(`Mismatched configuration for account ${i}. Missing PRIVATE_KEY_${i} or RPC_URL_${i} (for Ten Testnet).`);
             process.exit(1);
@@ -606,25 +578,24 @@ async function main() {
     }
 
     while (true) {
-        gameMessageLogs.length = 0;
+        gameMessageLogs.length = 0; 
 
         const globalChoice = getMenuSelection();
 
-        if (globalChoice === 9) {
+        if (globalChoice === 8) { 
             logger.success('Exiting Ten Testnet Auto Bot. Goodbye!');
             break;
         }
 
-        let betAmountZEN = null;
-        let bridgeAmountETH = null;
+        let betAmountZEN = null; // Changed from betAmountETH
+        let bridgeAmountETH = null; 
         let selectedAI = null;
         let rounds = 1;
-        let roundIdToClaim = null;
 
         if (globalChoice === 1) { // HouseOfTen Game
             selectedAI = getAISelection();
             logger.info(`Selected AI for all accounts: ${selectedAI.name} (${selectedAI.address})`);
-            betAmountZEN = prompt('Enter bet amount in ZEN (e.g., 0.0001) for all accounts: ');
+            betAmountZEN = prompt('Enter bet amount in ZEN (e.g., 0.0001) for all accounts: '); // Prompt for ZEN
             if (isNaN(parseFloat(betAmountZEN)) || parseFloat(betAmountZEN) <= 0) {
                 logger.error('Invalid bet amount. Returning to main menu.');
                 console.log('\n');
@@ -643,25 +614,8 @@ async function main() {
             } else {
                 logger.warn('Invalid number of rounds. Defaulting to 1 round.');
             }
-        } else if (globalChoice === 4) { // Claim Betting Rewards
-            roundIdToClaim = prompt('Enter the Round ID to claim rewards for: ');
-            if (isNaN(parseInt(roundIdToClaim)) || parseInt(roundIdToClaim) < 0) {
-                logger.error('Invalid Round ID. Please enter a positive integer. Returning to main menu.');
-                console.log('\n');
-                continue;
-            }
-            const accountsToProcessInput = prompt(`Enter number of accounts to process (1-${accounts.length}, or leave blank for all): `);
-            if (!isNaN(parseInt(accountsToProcessInput)) && parseInt(accountsToProcessInput) > 0 && parseInt(accountsToProcessInput) <= accounts.length) {
-                rounds = parseInt(accountsToProcessInput);
-            } else if (accountsToProcessInput === '') {
-                rounds = accounts.length;
-                logger.warn(`Processing all ${accounts.length} accounts.`);
-            } else {
-                logger.warn('Invalid number of accounts to process. Defaulting to processing all accounts.');
-                rounds = accounts.length;
-            }
-        } else if (globalChoice === 7 || globalChoice === 8) { // Bridge Sepolia->Ten atau Ten->Sepolia
-            bridgeAmountETH = prompt('Enter amount of ETH to bridge for all accounts (e.g., 0.0001): ');
+        } else if (globalChoice === 6 || globalChoice === 7) { // Bridge Sepolia->Ten atau Ten->Sepolia
+            bridgeAmountETH = prompt('Enter amount of ETH to bridge for all accounts (e.g., 0.0001): '); 
             if (isNaN(parseFloat(bridgeAmountETH)) || parseFloat(bridgeAmountETH) <= 0) {
                 logger.error('Invalid bridge amount. Returning to main menu.');
                 console.log('\n');
@@ -674,63 +628,49 @@ async function main() {
                 logger.warn('Invalid number of rounds. Defaulting to 1 round.');
             }
         }
-
+        
         for (let r = 0; r < rounds; r++) {
-            console.log(`\n${colors.bold}--- Starting ${globalChoice === 4 ? 'Account' : 'Round'} ${r + 1}/${rounds} ---${colors.reset}`);
-            // For claiming, 'r' here represents the index of the account to process
-            const accountIndex = (globalChoice === 4) ? r : 0; // Use r for account index if claiming, else 0 (inner loop for other actions)
+            console.log(`\n${colors.bold}--- Starting Round ${r + 1}/${rounds} ---${colors.reset}`);
+            for (const [index, account] of accounts.entries()) {
+                console.log(`\n${colors.bold}--- Processing Account ${index + 1}/${accounts.length} (Round ${r + 1}) ---${colors.reset}`);
+                try {
+                    const currentProviderTen = new ethers.JsonRpcProvider(account.rpcUrlTen);
+                    const currentWalletTen = new ethers.Wallet(account.privateKey, currentProviderTen);
+                    
+                    const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWalletTen);
+                    const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWalletTen);
 
-            // If claiming, only process up to 'rounds' number of accounts
-            if (globalChoice === 4 && accountIndex >= accounts.length) {
-                break; // Stop if we've processed the requested number of accounts
-            }
-            const account = accounts[accountIndex];
+                    logger.wallet(`Wallet Address: ${currentWalletTen.address}`);
+                    logger.info(`Using Ten RPC: ${account.rpcUrlTen}`);
+                    logger.info(`Using Sepolia RPC: ${account.rpcUrlSepolia}`);
 
-            console.log(`\n${colors.bold}--- Processing Account ${accountIndex + 1}/${accounts.length} (Round ${r + 1}) ---${colors.reset}`);
-            try {
-                const currentProviderTen = new ethers.JsonRpcProvider(account.rpcUrlTen);
-                const currentWalletTen = new ethers.Wallet(account.privateKey, currentProviderTen);
+                    if (globalChoice === 1) {
+                        await houseOfTenGameAutomated(currentWalletTen, currentProviderTen, currentZenContract, currentBettingContract, selectedAI, betAmountZEN); // Use betAmountZEN
+                    } else if (globalChoice === 2) {
+                        await playTenzenGame(currentWalletTen, currentProviderTen);
+                    } else if (globalChoice === 3) {
+                        await battleshipsGame(currentWalletTen, currentProviderTen);
+                    } else if (globalChoice === 6) { // Bridge Sepolia -> Ten
+                        await bridgeEthToTen(currentWalletTen, account.rpcUrlSepolia, currentWalletTen.address, bridgeAmountETH); 
+                    } else if (globalChoice === 7) { // Bridge Ten -> Sepolia
+                        await bridgeEthToSepolia(currentWalletTen, account.rpcUrlTen, currentWalletTen.address, bridgeAmountETH); 
+                    }
 
-                const currentZenContract = new ethers.Contract(ZEN_CONTRACT, zenABI, currentWalletTen);
-                const currentBettingContract = new ethers.Contract(BETTING_CONTRACT, bettingABI, currentWalletTen);
-
-                logger.wallet(`Wallet Address: ${currentWalletTen.address}`);
-                logger.info(`Using Ten RPC: ${account.rpcUrlTen}`);
-                logger.info(`Using Sepolia RPC: ${account.rpcUrlSepolia}`);
-
-                if (globalChoice === 1) {
-                    await houseOfTenGameAutomated(currentWalletTen, currentProviderTen, currentZenContract, currentBettingContract, selectedAI, betAmountZEN);
-                } else if (globalChoice === 2) {
-                    await playTenzenGame(currentWalletTen, currentProviderTen);
-                } else if (globalChoice === 3) {
-                    await battleshipsGame(currentWalletTen, currentProviderTen);
-                } else if (globalChoice === 4) { // Claim Betting Rewards
-                    await claimBettingRewards(currentWalletTen, currentBettingContract, parseInt(roundIdToClaim));
-                } else if (globalChoice === 7) { // Bridge Sepolia -> Ten
-                    await bridgeEthToTen(currentWalletTen, account.rpcUrlSepolia, currentWalletTen.address, bridgeAmountETH);
-                } else if (globalChoice === 8) { // Bridge Ten -> Sepolia
-                    await bridgeEthToSepolia(currentWalletTen, account.rpcUrlTen, currentWalletTen.address, bridgeAmountETH);
+                } catch (error) {
+                    logger.error(`Error processing account ${index + 1} (${account.rpcUrlTen}) in Round ${r + 1}: ${error.message}`);
                 }
-
-            } catch (error) {
-                logger.error(`Error processing account ${accountIndex + 1} (${account.rpcUrlTen}) in Round ${r + 1}: ${error.message}`);
-            }
-
-            // Pause logic
-            if (globalChoice === 4) { // Specific pause for claiming
-                if (r < rounds - 1) {
-                    logger.info('Waiting 5 seconds before processing next account for claiming...');
+                if (index < accounts.length - 1) {
+                    logger.info('Waiting 5 seconds before processing next account...');
                     await new Promise(resolve => setTimeout(resolve, 5000));
                 }
-            } else { // General pause for other actions
-                if (r < rounds - 1 || (r === rounds - 1 && accounts.length > 1)) {
-                    logger.info('Waiting 5 seconds before next account/round...');
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                }
+            }
+            if (r < rounds - 1) { 
+                logger.info(`Waiting 3 seconds before next round...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
             }
         }
-        logger.success('All actions processed for the selected option.');
-
+        logger.success('All rounds processed for the selected action.');
+        
         if (globalChoice === 3) {
             logger.displayGameLogs();
         }
